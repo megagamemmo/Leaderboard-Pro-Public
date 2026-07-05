@@ -1,0 +1,16 @@
+{
+  "name": "leaderboard-pro-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "start": "npm --workspace apps/web run start",
+    "typecheck": "npm --workspace apps/web run typecheck",
+    "sync:ts36-runtime": "node tools/sync-ts36-runtime.mjs",
+    "test:three-modes": "node tools/test-three-mode-workflow.mjs",
+    "smoke:mode1-local": "python tools/smoke-mode1-local.py"
+  },
+  "workspaces": [
+    "apps/web"
+  ]
+}

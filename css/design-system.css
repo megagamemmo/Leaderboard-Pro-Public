@@ -1,0 +1,117 @@
+/* Leaderboard Pro design tokens derived from TourSystem36 Pro */
+:root,
+:root[data-theme="dark"] {
+  --bg: #09090b;
+  --surface: #121214;
+  --surface-card: rgba(24, 24, 27, 0.55);
+  --surface-raised: rgba(39, 39, 42, 0.7);
+  --border: rgba(255,255,255,0.07);
+  --border-focus: rgba(255,255,255,0.25);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-subtle: #475569;
+  --primary: #ffffff;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-subtle: rgba(16,185,129,0.15);
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #38bdf8;
+  --glass: rgba(255,255,255,0.03);
+  --glass-border: rgba(255,255,255,0.08);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.25);
+  --shadow: 0 12px 32px rgba(0,0,0,0.4);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.6);
+  --radius-lg: 24px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-card: rgba(255, 255, 255, 0.75);
+  --surface-raised: rgba(255, 255, 255, 0.95);
+  --border: rgba(0,0,0,0.06);
+  --border-focus: rgba(0,0,0,0.22);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #cbd5e1;
+  --primary: #0f172a;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-subtle: rgba(5,150,105,0.1);
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+  --glass: rgba(255,255,255,0.5);
+  --glass-border: rgba(0,0,0,0.04);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.03);
+  --shadow: 0 12px 32px rgba(0,0,0,0.06);
+  --shadow-lg: 0 24px 64px rgba(0,0,0,0.09);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", "Outfit", "SF Pro Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  outline: none;
+  padding: 11px 12px;
+  transition: var(--transition);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
