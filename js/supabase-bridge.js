@@ -30,6 +30,52 @@
     return Number.isFinite(value) && value >= 5000 ? Math.min(300000, Math.trunc(value)) : 300000;
   }
 
+  function getLeaderboardBridgeEndpoint() {
+    const env = getEnv();
+    const explicit = String(env.LEADERBOARD_BRIDGE_ENDPOINT || env.OPERATOR_BRIDGE_ENDPOINT || "").trim();
+    if (explicit) return explicit;
+    const baseUrl = getPublicStateBaseUrl();
+    return baseUrl ? `${baseUrl}/api/leaderboard-bridge` : "";
+  }
+
+  function isDirectOperatorBridgeFallbackEnabled() {
+    const env = getEnv();
+    return /^(1|true|yes)$/i.test(String(env.OPERATOR_BRIDGE_DIRECT_SUPABASE_FALLBACK || ""));
+  }
+
+  async function callLeaderboardBridge(action, payload = {}) {
+    const endpoint = getLeaderboardBridgeEndpoint();
+    if (!endpoint || !window.fetch) return null;
+
+    const response = await window.fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      cache: "no-store",
+      body: JSON.stringify({ action, payload })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || result.ok === false) {
+      const error = new Error(result.error || `leaderboard_bridge_${response.status}`);
+      error.bridgeResult = result;
+      throw error;
+    }
+    return result;
+  }
+
+  async function callLeaderboardBridgeOrFallback(action, payload, fallback) {
+    try {
+      const result = await callLeaderboardBridge(action, payload);
+      if (result) return result;
+    } catch (err) {
+      if (!isDirectOperatorBridgeFallbackEnabled()) throw err;
+      console.warn("[TS36 Bridge] proxy failed, falling back to direct Supabase:", err);
+    }
+    return fallback();
+  }
+
   function isDirectPublicSnapshotFallbackEnabled() {
     const env = getEnv();
     return /^(1|true|yes)$/i.test(String(env.PUBLIC_SNAPSHOT_DIRECT_SUPABASE_FALLBACK || ""));
@@ -122,6 +168,9 @@
   async function checkConnection() {
     const supabaseClient = getClient();
     if (!supabaseClient) {
+      if (getLeaderboardBridgeEndpoint()) {
+        return { ok: true, mode: "bridge", message: "TS36 bridge connected" };
+      }
       return { ok: false, mode: "local", message: "Chưa cấu hình Supabase" };
     }
 
@@ -224,78 +273,96 @@
   }
 
   async function listActiveOperatorTournaments() {
-    const supabaseClient = getClient();
-    if (!supabaseClient) return [];
+    return callLeaderboardBridgeOrFallback("listActiveOperatorTournaments", {}, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient) return [];
 
-    try {
-      const { data, error } = await supabaseClient.rpc("list_active_operator_tournaments");
-      if (error) throw error;
-      return Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.warn("[Supabase] list operator tournaments failed:", err);
-      return [];
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("list_active_operator_tournaments");
+        if (error) throw error;
+        return Array.isArray(data) ? data : [];
+      } catch (err) {
+        console.warn("[Supabase] list operator tournaments failed:", err);
+        return [];
+      }
+    }).then(result => Array.isArray(result?.rows) ? result.rows : Array.isArray(result) ? result : []);
   }
 
   async function validateOperatorTournament(operatorTournamentId, privateCode) {
-    const supabaseClient = getClient();
-    if (!supabaseClient) return { ok: false, error: "supabase_not_configured" };
+    return callLeaderboardBridgeOrFallback("validateOperatorTournament", {
+      operatorTournamentId,
+      privateCode
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient) return { ok: false, error: "supabase_not_configured" };
 
-    try {
-      const { data, error } = await supabaseClient.rpc("validate_operator_tournament_code", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode
-      });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      return row ? { ok: true, tournament: row } : { ok: false, error: "not_found" };
-    } catch (err) {
-      return { ok: false, error: err.message };
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("validate_operator_tournament_code", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        return row ? { ok: true, tournament: row } : { ok: false, error: "not_found" };
+      } catch (err) {
+        return { ok: false, error: err.message };
+      }
+    }).catch(err => ({ ok: false, error: err.message }));
   }
 
   async function publishOperatorSnapshot(operatorTournamentId, privateCode, snapshot) {
     if (simulatorWriteBlocked()) return localOnlyResult();
-    const supabaseClient = getClient();
-    if (!supabaseClient) return { ok: false, reason: "local_only" };
+    return callLeaderboardBridgeOrFallback("publishOperatorSnapshot", {
+      operatorTournamentId,
+      privateCode,
+      snapshot
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient) return { ok: false, reason: "local_only" };
 
-    try {
-      const { data, error } = await supabaseClient.rpc("upsert_operator_leaderboard_snapshot", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode,
-        p_snapshot: snapshot
-      });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      const shareSlug = row?.share_slug || snapshot?.shareSlug || "";
-      const revalidated = await revalidatePublicState(shareSlug, {
-        operatorTournamentId,
-        tournamentId: row?.leaderboard_tournament_id || snapshot?.tournament?.id || ""
-      });
-      return { ok: true, data: row || null, revalidated };
-    } catch (err) {
-      console.warn("[Supabase] publish operator snapshot failed:", err);
-      return { ok: false, reason: err.message };
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("upsert_operator_leaderboard_snapshot", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode,
+          p_snapshot: snapshot
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        const shareSlug = row?.share_slug || snapshot?.shareSlug || "";
+        const revalidated = await revalidatePublicState(shareSlug, {
+          operatorTournamentId,
+          tournamentId: row?.leaderboard_tournament_id || snapshot?.tournament?.id || ""
+        });
+        return { ok: true, data: row || null, revalidated };
+      } catch (err) {
+        console.warn("[Supabase] publish operator snapshot failed:", err);
+        return { ok: false, reason: err.message };
+      }
+    }).catch(err => ({ ok: false, reason: err.message }));
   }
 
   async function loadOperatorTournamentScoresWithStatus(operatorTournamentId, privateCode) {
-    const supabaseClient = getClient();
-    if (!supabaseClient || !operatorTournamentId || !privateCode) {
-      return { ok: false, rows: [], reason: "missing_config" };
-    }
+    return callLeaderboardBridgeOrFallback("loadOperatorTournamentScores", {
+      operatorTournamentId,
+      privateCode
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient || !operatorTournamentId || !privateCode) {
+        return { ok: false, rows: [], reason: "missing_config" };
+      }
 
-    try {
-      const { data, error } = await supabaseClient.rpc("list_operator_tournament_scores", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode
-      });
-      if (error) throw error;
-      return { ok: true, rows: Array.isArray(data) ? data : [] };
-    } catch (err) {
-      console.warn("[Supabase] load operator tournament scores failed:", err);
-      return { ok: false, rows: [], reason: err.message };
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("list_operator_tournament_scores", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode
+        });
+        if (error) throw error;
+        return { ok: true, rows: Array.isArray(data) ? data : [] };
+      } catch (err) {
+        console.warn("[Supabase] load operator tournament scores failed:", err);
+        return { ok: false, rows: [], reason: err.message };
+      }
+    }).catch(err => ({ ok: false, rows: [], reason: err.message }));
   }
 
   function isMissingOperatorScoreChangesRpc(error) {
@@ -312,6 +379,35 @@
     privateCode,
     afterChangeSeq = 0
   ) {
+    try {
+      const result = await callLeaderboardBridge("loadOperatorTournamentScoreChanges", {
+        operatorTournamentId,
+        privateCode,
+        afterChangeSeq,
+        limit: 500
+      });
+      if (result) {
+        return {
+          ok: true,
+          rows: Array.isArray(result.rows) ? result.rows : [],
+          cursor: Math.max(0, Number.parseInt(result.cursor, 10) || 0),
+          incremental: true,
+          baseline: Number(afterChangeSeq || 0) === 0
+        };
+      }
+    } catch (err) {
+      if (!isDirectOperatorBridgeFallbackEnabled()) {
+        console.warn("[TS36 Bridge] load operator tournament score changes failed:", err);
+        return {
+          ok: false,
+          rows: [],
+          cursor: Math.max(0, Number.parseInt(afterChangeSeq, 10) || 0),
+          reason: err.message
+        };
+      }
+      console.warn("[TS36 Bridge] proxy failed, falling back to direct Supabase:", err);
+    }
+
     const supabaseClient = getClient();
     if (!supabaseClient || !operatorTournamentId || !privateCode) {
       return { ok: false, rows: [], reason: "missing_config" };
@@ -381,64 +477,81 @@
   }
 
   async function loadOperatorTournamentParticipants(operatorTournamentId, privateCode) {
-    const supabaseClient = getClient();
-    if (!supabaseClient || !operatorTournamentId || !privateCode) return [];
+    return callLeaderboardBridgeOrFallback("loadOperatorTournamentParticipants", {
+      operatorTournamentId,
+      privateCode
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient || !operatorTournamentId || !privateCode) return [];
 
-    try {
-      const { data, error } = await supabaseClient.rpc("list_operator_tournament_participants", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode
-      });
-      if (error) throw error;
-      return Array.isArray(data) ? data : [];
-    } catch (err) {
-      console.warn("[Supabase] load operator tournament participants failed:", err);
-      return [];
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("list_operator_tournament_participants", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode
+        });
+        if (error) throw error;
+        return Array.isArray(data) ? data : [];
+      } catch (err) {
+        console.warn("[Supabase] load operator tournament participants failed:", err);
+        return [];
+      }
+    }).then(result => Array.isArray(result?.rows) ? result.rows : Array.isArray(result) ? result : []);
   }
 
   async function resetOperatorTournamentSuggestedMatches(operatorTournamentId, privateCode) {
     if (simulatorWriteBlocked()) return localOnlyResult();
-    const supabaseClient = getClient();
-    if (!supabaseClient || !operatorTournamentId || !privateCode) {
-      return { ok: false, reason: "missing_config" };
-    }
+    return callLeaderboardBridgeOrFallback("resetOperatorTournamentSuggestedMatches", {
+      operatorTournamentId,
+      privateCode
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient || !operatorTournamentId || !privateCode) {
+        return { ok: false, reason: "missing_config" };
+      }
 
-    try {
-      const { data, error } = await supabaseClient.rpc("reset_operator_tournament_suggested_matches", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode
-      });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      return { ok: true, data: row || null };
-    } catch (err) {
-      console.warn("[Supabase] reset operator suggested matches failed:", err);
-      return { ok: false, reason: err.message };
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("reset_operator_tournament_suggested_matches", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        return { ok: true, data: row || null };
+      } catch (err) {
+        console.warn("[Supabase] reset operator suggested matches failed:", err);
+        return { ok: false, reason: err.message };
+      }
+    }).catch(err => ({ ok: false, reason: err.message }));
   }
 
   async function acceptOperatorTournamentSuggestedMatch(operatorTournamentId, privateCode, tourSystemUserId, leaderboardPlayerId) {
     if (simulatorWriteBlocked()) return localOnlyResult();
-    const supabaseClient = getClient();
-    if (!supabaseClient || !operatorTournamentId || !privateCode || !tourSystemUserId || !leaderboardPlayerId) {
-      return { ok: false, reason: "missing_config" };
-    }
+    return callLeaderboardBridgeOrFallback("acceptOperatorTournamentSuggestedMatch", {
+      operatorTournamentId,
+      privateCode,
+      tourSystemUserId,
+      leaderboardPlayerId
+    }, async () => {
+      const supabaseClient = getClient();
+      if (!supabaseClient || !operatorTournamentId || !privateCode || !tourSystemUserId || !leaderboardPlayerId) {
+        return { ok: false, reason: "missing_config" };
+      }
 
-    try {
-      const { data, error } = await supabaseClient.rpc("accept_operator_tournament_suggested_match", {
-        p_operator_tournament_id: operatorTournamentId,
-        p_private_code: privateCode,
-        p_toursystem_user_id: tourSystemUserId,
-        p_leaderboard_player_id: leaderboardPlayerId
-      });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      return { ok: true, data: row || null };
-    } catch (err) {
-      console.warn("[Supabase] accept operator suggested match failed:", err);
-      return { ok: false, reason: err.message };
-    }
+      try {
+        const { data, error } = await supabaseClient.rpc("accept_operator_tournament_suggested_match", {
+          p_operator_tournament_id: operatorTournamentId,
+          p_private_code: privateCode,
+          p_toursystem_user_id: tourSystemUserId,
+          p_leaderboard_player_id: leaderboardPlayerId
+        });
+        if (error) throw error;
+        const row = Array.isArray(data) ? data[0] : data;
+        return { ok: true, data: row || null };
+      } catch (err) {
+        console.warn("[Supabase] accept operator suggested match failed:", err);
+        return { ok: false, reason: err.message };
+      }
+    }).catch(err => ({ ok: false, reason: err.message }));
   }
 
   async function requestLeaderboardSyncUnlock(tournamentId, sourceOcrUnlocked) {
