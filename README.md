@@ -9,7 +9,7 @@ node_modules, and local simulator/admin tooling.
 Runtime modes:
 
 - Mode 1: Local Only, stored in browser/local runtime.
-- Mode 2: Fixed TourSystem36 bridge, using publishable Supabase access plus server-side RLS/RPC checks.
+- Mode 2: Fixed TourSystem36 bridge, using the TS36 server proxy plus server-side RLS/RPC checks.
 - Mode 3: Flexible cloud operator runtime hosted by TourSystem36 at `/leaderboard/manage`.
 
 Secrets are not stored in this repository. Gemini and Supabase secret/service keys must stay
