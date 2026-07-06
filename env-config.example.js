@@ -20,7 +20,6 @@ window.ENV = {
   GEMINI_SCORECARD_ENDPOINT: "https://system36.vercel.app/api/gemini-scorecard-ocr",
   OCR_MAX_IMAGE_SIDE: 1800,
   GOOGLE_AI_STUDIO_ENDPOINT: "",
-  GOOGLE_AI_STUDIO_API_KEY: "",
   DEFAULT_SYNC_MODE: "local",
   LB_RUNTIME_MODE: "local",
   LB_RUNTIME_CLIENT: "local",
