@@ -1001,10 +1001,12 @@ function confirmFlightConfig() {
       alert(result.message);
       return;
     }
-    state().flightConfig = window.LB.appPlayer.normalizeFlightConfig({
-      ...(state().flightConfig || {}),
-      rosterImportReady: true
-    });
+    if (!window.LB.app?.markRosterImportReady?.()) {
+      state().flightConfig = window.LB.appPlayer.normalizeFlightConfig({
+        ...(state().flightConfig || {}),
+        rosterImportReady: true
+      });
+    }
     window.LB.storage.saveState();
     window.LB.appPlayer.renderFlightConfigStatus();
     scheduleOperatorFlightConfigPublish();
@@ -1131,9 +1133,9 @@ function renderCourseGrid() {
     const lockedByOfflineCourse = window.LB.appPlayer.isOfflineCourseSelectionLocked();
     const lockedByCloudRuntime = window.LB.appUtils.getCapabilities().cloudRuntime;
     const locked = lockedByOfflineCourse || lockedByCloudRuntime;
-    const lockTitle = lockedByCloudRuntime
+    const lockTitle = window.LB.app?.getCourseGridLockTitle?.(lockedByCloudRuntime) || (lockedByCloudRuntime
       ? "Mode 3 khóa Par/SI theo course snapshot của tournament."
-      : "Par/SI đang khóa vì sân được chọn từ offline list. Đổi tên sân thủ công để mở nhập tay.";
+      : "Par/SI đang khóa vì sân được chọn từ offline list. Đổi tên sân thủ công để mở nhập tay.");
     state().course = state().course || {};
     state().course.holes = holes;
     root.innerHTML = holes.map(hole => `

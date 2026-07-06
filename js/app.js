@@ -876,6 +876,60 @@
     }
   }
 
+  function validateOperatorTournamentRuntime(tournament) {
+    const normalizedTournament = window.LB.appUtils.normalizeOperatorTournament(tournament || {});
+    const capabilities = window.LB.appUtils.getCapabilities();
+    if (normalizedTournament.managementMode === "flexible" && !capabilities.cloudRuntime) {
+      return {
+        ok: false,
+        reason: "flexible_requires_cloud_runtime",
+        message: "Tournament này dùng Điều hành linh động. Mở /leaderboard/manage hoặc chạy local fallback bằng cloud adapter để lấy lease độc quyền."
+      };
+    }
+    return { ok: true, tournament: normalizedTournament };
+  }
+
+  function unlockTournamentFormInputs() {
+    [
+      "tournament-name",
+      "operator-name",
+      "course-name",
+      "course-rating-male",
+      "slope-rating-male",
+      "course-rating-female",
+      "slope-rating-female"
+    ].forEach(id => {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.readOnly = false;
+      input.classList.remove("is-mode3-readonly");
+      input.title = "";
+    });
+    return true;
+  }
+
+  function getCourseGridLockTitle(lockedByCloudRuntime) {
+    return lockedByCloudRuntime
+      ? "Mode 3 khóa Par/SI theo course snapshot của tournament."
+      : "Par/SI đang khóa vì sân được chọn từ offline list. Đổi tên sân thủ công để mở nhập tay.";
+  }
+
+  function getRosterImportGateMessage({ flightConfigState, hasFlights, requiresSystem36, s36Count, ready } = {}) {
+    if (!flightConfigState?.ok) return flightConfigState?.message || "Cần kiểm tra Cài đặt bảng đấu trước khi import.";
+    if (!hasFlights) return "Cần tạo ít nhất 1 bảng trước khi import danh sách.";
+    if (requiresSystem36 && !s36Count) return "Tournament đã link TS36 cần có ít nhất 1 bảng S36 trước khi import danh sách.";
+    if (!ready) return "Hãy bấm Xác nhận bảng trước khi import danh sách.";
+    return "";
+  }
+
+  function markRosterImportReady() {
+    state().flightConfig = window.LB.appPlayer.normalizeFlightConfig({
+      ...(state().flightConfig || {}),
+      rosterImportReady: true
+    });
+    return state().flightConfig;
+  }
+
   function scheduleOperatorFlightConfigPublish() {
     window.clearTimeout(flightConfigPublishTimer);
     flightConfigPublishTimer = window.setTimeout(async () => {
@@ -1150,6 +1204,7 @@
       !!record.ocrPending ||
       (operator && user && Number(operator) !== Number(user))
     );
+    const isReviewRequired = !!record.ocrPending || !!record.ocrReviewRequired || record.conflictStatus === "conflict";
     const sourceText = record.ocrPending || record.source === "ocr"
       ? "OCR"
       : (user ? `TS36 ${user}` : (operator ? "GO" : (official ? "Đã duyệt" : "")));
@@ -1174,7 +1229,7 @@
     const tagName = options.mobile ? "div" : "td";
     const mobileClass = options.mobile ? "score-mobile-score-cell" : "";
     return `
-      <${tagName} class="score-cell ${mobileClass} ${isConfirmedCurrent ? "is-confirmed" : ""} ${isPending ? "is-pending-confirm" : ""} ${isConflict ? "is-conflict" : ""} ${user ? "has-ts36" : ""} ${scoreToPar.className} ${liveClass}" data-score-key="${window.LB.appUtils.escapeHtml(scoreKey)}" data-score-diff="${window.LB.appUtils.escapeHtml(scoreToPar.diff ?? "")}">
+      <${tagName} class="score-cell ${mobileClass} ${isConfirmedCurrent ? "is-confirmed" : ""} ${isPending ? "is-pending-confirm" : ""} ${isConflict ? "is-conflict" : ""} ${isReviewRequired ? "is-review-required" : ""} ${user ? "has-ts36" : ""} ${scoreToPar.className} ${liveClass}" data-score-key="${window.LB.appUtils.escapeHtml(scoreKey)}" data-score-diff="${window.LB.appUtils.escapeHtml(scoreToPar.diff ?? "")}">
         <input class="score-input" type="number" min="1" max="30" value="${window.LB.appUtils.escapeHtml(candidate)}" placeholder="${window.LB.appUtils.escapeHtml(user || "")}" data-player-id="${window.LB.appUtils.escapeHtml(player.id)}" data-hole="${hole}" aria-label="${window.LB.appUtils.escapeHtml(player.name)} hố ${hole}, par ${window.LB.appUtils.escapeHtml(scoreToPar.par)}">
         <small>${window.LB.appUtils.escapeHtml(sourceText)}</small>
         <span class="score-status-label ${statusClass}" title="${window.LB.appUtils.escapeHtml(isPending ? "Điểm đang chờ GO xác nhận" : "Trạng thái điểm")}">${window.LB.appUtils.escapeHtml(statusText)}</span>
@@ -2210,6 +2265,12 @@
 
   window.promptOcrIdentityMatch = window.LB.appOcr.promptOcrIdentityMatch;
 
+  function getRosterOcrProvider() {
+    return window.LB.appUtils.getCapabilities().cloudRuntime
+      ? "google_ai_studio"
+      : (document.getElementById("roster-ocr-provider")?.value || "paddle_local");
+  }
+
   async function runOcr() {
     const provider = window.LB.appUtils.getCapabilities().cloudRuntime
       ? "gemini_api"
@@ -2653,6 +2714,12 @@
     publishOperatorLinkSnapshot,
     scheduleOperatorSnapshotPublish,
     renderOperationModeVisibility: window.LB.appUtils.renderOperationModeVisibility,
+    validateOperatorTournamentRuntime,
+    getRosterOcrProvider,
+    unlockTournamentFormInputs,
+    getCourseGridLockTitle,
+    getRosterImportGateMessage,
+    markRosterImportReady,
     finishLinkedTournamentEntry: window.LB.appUtils.finishLinkedTournamentEntry,
     applyOperatorTournamentToState: window.LB.appUtils.applyOperatorTournamentToState
   };

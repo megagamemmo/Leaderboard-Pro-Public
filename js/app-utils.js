@@ -1157,21 +1157,23 @@ function renderTournamentForm() {
     window.LB.appUtils.setValue("tournament-name", t.name);
     window.LB.appUtils.setValue("operator-name", t.operatorName);
     window.LB.appUtils.setValue("course-name", t.courseName);
-    [
-      "tournament-name",
-      "operator-name",
-      "course-name",
-      "course-rating-male",
-      "slope-rating-male",
-      "course-rating-female",
-      "slope-rating-female"
-    ].forEach(id => {
-      const input = document.getElementById(id);
-      if (!input) return;
-      input.readOnly = false;
-      input.classList.remove("is-mode3-readonly");
-      input.title = "";
-    });
+    if (!window.LB.app?.unlockTournamentFormInputs?.()) {
+      [
+        "tournament-name",
+        "operator-name",
+        "course-name",
+        "course-rating-male",
+        "slope-rating-male",
+        "course-rating-female",
+        "slope-rating-female"
+      ].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.readOnly = false;
+        input.classList.remove("is-mode3-readonly");
+        input.title = "";
+      });
+    }
     window.LB.appUtils.setValue("start-hole", t.startHole);
     state().tournament.handicapRatings = {
       male: { courseRating: "", slopeRating: "", ...(state().tournament.handicapRatings?.male || {}) },
@@ -1305,18 +1307,29 @@ async function linkOperatorTournament() {
     }
 
     const normalizedTournament = window.LB.appUtils.normalizeOperatorTournament(result.tournament);
-    const capabilities = window.LB.appUtils.getCapabilities();
-    if (normalizedTournament.managementMode === "flexible" && !capabilities.cloudRuntime) {
+    const runtimeValidation = window.LB.app?.validateOperatorTournamentRuntime?.(normalizedTournament);
+    if (runtimeValidation && !runtimeValidation.ok) {
       window.LB.appUtils.setOperatorLinkStatus(
-        "Tournament này dùng Điều hành linh động. Mở /leaderboard/manage hoặc chạy local fallback bằng cloud adapter để lấy lease độc quyền.",
+        runtimeValidation.message || "Tournament này cần cloud runtime.",
         "error"
       );
       return;
     }
+    if (!runtimeValidation) {
+      const capabilities = window.LB.appUtils.getCapabilities();
+      if (normalizedTournament.managementMode === "flexible" && !capabilities.cloudRuntime) {
+        window.LB.appUtils.setOperatorLinkStatus(
+          "Tournament này dùng Điều hành linh động. Mở /leaderboard/manage hoặc chạy local fallback bằng cloud adapter để lấy lease độc quyền.",
+          "error"
+        );
+        return;
+      }
+    }
+    const linkedTournament = runtimeValidation?.tournament || normalizedTournament;
 
     state().operator.privateCode = code;
     state().tournament.operatorPrivateCode = code;
-    window.LB.appUtils.applyOperatorTournamentToState(normalizedTournament);
+    window.LB.appUtils.applyOperatorTournamentToState(linkedTournament);
     window.LB.appUtils.setOperatorLinkStatus("Đã vào giải. Player-panel vẫn lưu local; bấm Nạp danh sách khi roster đã sẵn sàng cho TS36.", "linked");
     window.LB.appUtils.persistAndRender();
     window.LB.appUtils.finishLinkedTournamentEntry();

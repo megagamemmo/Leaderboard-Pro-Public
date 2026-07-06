@@ -67,9 +67,11 @@ function promptOcrIdentityMatch(row, division, allPlayers) {
   }
 
 async function runRosterImportOcr() {
-    const provider = window.LB.appUtils.getCapabilities().cloudRuntime
+    const provider = window.LB.app?.getRosterOcrProvider?.() || (
+      window.LB.appUtils.getCapabilities().cloudRuntime
       ? "google_ai_studio"
-      : (document.getElementById("roster-ocr-provider")?.value || "paddle_local");
+      : (document.getElementById("roster-ocr-provider")?.value || "paddle_local")
+    );
     const files = document.getElementById("roster-ocr-files")?.files;
     const fileCount = files?.length || 0;
     try {
@@ -79,13 +81,19 @@ async function runRosterImportOcr() {
       const requiresSystem36 = Boolean(state().operator?.linkedTournament?.id);
       const ready = window.LB.appPlayer.isFlightConfigReadyForRosterImport();
       if (!flightConfigState.ok || !flights.length || (requiresSystem36 && !s36Count) || !ready) {
-        const message = !flightConfigState.ok
+        const message = window.LB.app?.getRosterImportGateMessage?.({
+          flightConfigState,
+          hasFlights: !!flights.length,
+          requiresSystem36,
+          s36Count,
+          ready
+        }) || (!flightConfigState.ok
           ? flightConfigState.message
           : (!flights.length
               ? "Cần tạo ít nhất 1 bảng trước khi import danh sách."
               : (requiresSystem36 && !s36Count
                   ? "Tournament đã link TS36 cần có ít nhất 1 bảng S36 trước khi import danh sách."
-                  : "Hãy bấm Xác nhận bảng trước khi import danh sách."));
+                  : "Hãy bấm Xác nhận bảng trước khi import danh sách.")));
         setRosterOcrBusy(false, message);
         window.LB.appUtils.showView("dashboard");
         // document.querySelector(".flight-config-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -115,12 +123,20 @@ async function runRosterImportOcr() {
 
 function buildOcrContext(fileCount = 1) {
     const cfg = state().flightConfig || {};
+    const linkedTournament = state().operator.linkedTournament || {};
+    const operatorTournamentId = linkedTournament.id || state().tournament.operatorTournamentId || "";
+    const privateCode = state().operator.privateCode || state().tournament.operatorPrivateCode || "";
     return {
       courseName: state().tournament.courseName || "",
       startHole: state().tournament.startHole || 1,
       maxOpponents: Math.max(1, Math.min(20, (fileCount || 1) * 6)),
       allowFlightJump: !!cfg.allowFlightJump,
       flights: Array.isArray(cfg.flights) ? cfg.flights : [],
+      leaderboardBridgeAuth: {
+        operatorTournamentId,
+        privateCode,
+        managementMode: linkedTournament.management_mode || linkedTournament.managementMode || state().tournament.managementMode || ""
+      },
       holes: Array.from({ length: 18 }, (_, index) => {
         const hole = window.LB.scoring.getHoleConfig(state(), index + 1);
         return { hole: index + 1, par: hole.par, strokeIndex: hole.strokeIndex };
