@@ -6505,7 +6505,7 @@ dialog.modal::backdrop {
 }
 
 #view-simulator.public-simulator-view #simulator-form .form-actions {
-  align-items: stretch;
+  align-items: start;
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -6520,7 +6520,7 @@ dialog.modal::backdrop {
   display: inline-flex;
   justify-content: center;
   line-height: 1.15;
-  min-height: 44px;
+  min-height: 52px;
   min-width: 0;
   padding: 10px 8px;
   text-align: center;
@@ -6588,6 +6588,10 @@ dialog.modal::backdrop {
 
   #view-simulator.public-simulator-view #simulator-form .form-actions [data-simulator-action="create"] {
     grid-column: 1 / -1;
+  }
+
+  #view-simulator.public-simulator-view #simulator-form .form-actions button {
+    min-height: 44px;
   }
 
   #view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics {
