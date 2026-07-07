@@ -1741,8 +1741,20 @@ function ensureLocalShareSlugFromTournament() {
 
 function buildShareUrl() {
     window.LB.appUtils.ensureLocalShareSlugFromTournament();
-    const configuredBase = String(window.ENV?.PUBLIC_LIVE_BASE_URL || "").trim();
-    const baseUrl = configuredBase || window.location.href;
+    const capabilities = window.LB.appUtils.getCapabilities();
+    const shouldUseCloudLiveUrl = capabilities.cloudRuntime || capabilities.canUseBridge;
+    const configuredBase = shouldUseCloudLiveUrl
+      ? String(
+        window.ENV?.PUBLIC_LIVE_BASE_URL ||
+        window.ENV?.PUBLIC_LEADERBOARD_BASE_URL ||
+        window.ENV?.SITE_PUBLIC_URL ||
+        ""
+      ).trim()
+      : "";
+    const localBase = window.location.origin && window.location.origin !== "null"
+      ? `${window.location.origin.replace(/\/+$/, "")}/`
+      : window.location.href;
+    const baseUrl = configuredBase || localBase;
     return new URL(`live/${encodeURIComponent(state().tournament.shareSlug)}`, baseUrl).toString();
   }
 
@@ -1769,6 +1781,10 @@ function triggerAutoPublishRefreshEffect() {
 
 function downloadRuntimeFile(fileName, content, type = "application/octet-stream") {
     const blob = content instanceof Blob ? content : new Blob([content], { type });
+    window.LB.appUtils.downloadRuntimeBlob(fileName, blob);
+  }
+
+function downloadRuntimeBlob(fileName, blob) {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -1898,7 +1914,11 @@ function getStaticLiveDocument(snapshot) {
 </html>`;
   }
 
-function exportStaticLivePage() {
+async function exportStaticLivePage() {
+    if (!window.LB.appUtils.getCapabilities().canUseLocalServices) {
+      alert("Xuất gói live React tự host chỉ khả dụng khi chạy Leaderboard Pro local trên máy GO.");
+      return;
+    }
     const snapshot = buildOperatorLinkSnapshot();
     if (!window.LB.appUtils.hasPublishableLeaderboardData(snapshot)) {
       alert("Chưa có điểm GO đã xác nhận để xuất trang live.");
@@ -1906,7 +1926,38 @@ function exportStaticLivePage() {
     }
     window.LB.storage.saveSnapshot(snapshot, { publish: false });
     const slug = String(snapshot.shareSlug || "live").replace(/[^a-z0-9_-]/gi, "-");
-    window.LB.appUtils.downloadRuntimeFile(`${slug}.html`, window.LB.appUtils.getStaticLiveDocument(snapshot), "text/html;charset=utf-8");
+    window.LB.appUtils.setOperatorLinkStatus("Đang tạo gói live React tự host...");
+    const publishedToLan = await window.LB.storage.ensureLanSnapshotPublished(snapshot);
+    if (!publishedToLan && !confirm("Chưa nạp được dữ liệu live lên máy chủ snapshot của GO. Vẫn xuất gói live React? Trang tự host sẽ cập nhật khi máy GO nạp snapshot thành công.")) {
+      window.LB.appUtils.setOperatorLinkStatus("Đã hủy xuất gói live React.", "error");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/live-export-package/${encodeURIComponent(slug)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshot,
+          snapshotServerUrl: String(window.ENV?.LOCAL_SNAPSHOT_SERVER_URL || "").trim()
+        })
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.detail || payload?.error || `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      window.LB.appUtils.downloadRuntimeBlob(`${slug}-live-react.zip`, blob);
+      window.LB.appUtils.setOperatorLinkStatus(
+        publishedToLan
+          ? "Đã xuất gói live React. Gói này sẽ poll dữ liệu từ máy GO."
+          : "Đã xuất gói live React. Hãy giữ máy GO và snapshot service online để trang tự host cập nhật.",
+        "linked"
+      );
+    } catch (err) {
+      console.error("[LiveExport] Failed to export live React package", err);
+      window.LB.appUtils.setOperatorLinkStatus("Chưa xuất được gói live React.", "error");
+      alert(`Chưa xuất được gói live React: ${err.message || err}`);
+    }
   }
 
 async function copyShareUrl() {
@@ -1914,25 +1965,31 @@ async function copyShareUrl() {
     const copyAttempt = window.LB.appUtils.copyTextFromShareInput(value);
     const snapshot = buildOperatorLinkSnapshot();
     window.LB.storage.saveSnapshot(snapshot, { publish: false });
-    if (window.LB.appUtils.getCapabilities().canUseLocalServices) {
+    const capabilities = window.LB.appUtils.getCapabilities();
+    let publishedToLan = true;
+    if (capabilities.canUseLocalServices) {
       window.LB.appUtils.setOperatorLinkStatus("Đang nạp dữ liệu live lên máy chủ local...");
-      const publishedToLan = await window.LB.storage.ensureLanSnapshotPublished(snapshot);
+      publishedToLan = await window.LB.storage.ensureLanSnapshotPublished(snapshot);
       if (!publishedToLan) {
         window.LB.appUtils.setOperatorLinkStatus("Chưa nạp được dữ liệu live lên máy chủ local. App sẽ tự thử lại trong nền; chưa nên gửi link này.");
-        return;
       }
-    } else {
+    }
+    if (capabilities.cloudRuntime || capabilities.canUseBridge) {
       const published = await publishOperatorLinkSnapshot({ snapshot, silent: true });
       if (!published.ok) {
         window.LB.appUtils.setOperatorLinkStatus(`Chưa publish được bảng live: ${published.reason || "publish_failed"}`, "error");
         return;
       }
+    } else if (!publishedToLan) {
+      return;
     }
 
     const copied = await copyAttempt;
 
     window.LB.appUtils.setOperatorLinkStatus(
-      copied ? "Đã copy link live." : "Bảng live đã sẵn sàng. Hãy copy link trong ô bên cạnh.",
+      copied
+        ? (publishedToLan ? "Đã copy link live." : "Đã copy link live online. Link LAN sẽ sẵn sàng sau khi máy chủ local nạp được snapshot.")
+        : "Bảng live đã sẵn sàng. Hãy copy link trong ô bên cạnh.",
       copied ? "linked" : ""
     );
   }
@@ -2146,5 +2203,5 @@ async function checkSupabaseStatus(notify = false) {
     if (notify) alert(result.message);
   }
 
-  return { getCapabilities, readPositiveInt, clampMs, getOperatorScorePollSeconds, escapeHtml, cleanText, normalizeOperationNote, prefixOperationNote, stripAccents, normalizeSearchText, keyText, normalizeVgaId, hasSystem36RosterMarker, extractStartHoleNumber, cloneScoreMap, findRestorableScoreMap, playerMatchesPublicGolfId, isSameGolferIdentity, nameSimilarity, appendPendingScore, getEffectivePendingScoreHole, getScoreKey, hasAnyLocalScoreRecord, hasAnyConfirmedPublicScoreRecord, snapshotHasConfirmedPublicScores, hasPublishableLeaderboardData, loadOperatorCatalogOnDemand, startLinkedRuntimeServices, renderOperationModeVisibility, finishLinkedTournamentEntry, hydrateControls, bindEvents, getTooltipText, showTouchTooltip, handleTouchTooltipPointerDown, applyCollapsiblePanelState, restoreSearchFocus, applyScopedSearchQuery, applyMobileOverviewPanelState, preserveMobileDashboardScrollAnchor, setMobileDashboardOverviewCollapsed, syncMobileDashboardOverviewForViewport, handleDoubleClick, getScoreGridRows, handleScoreGridKeydown, handleInput, handleChange, handleSearchBlur, handleSearchPointerDown, getNormalizedCaddyNumber, recomputeCaddyDuplicates, syncCaddyDuplicateClasses, handleBlur, applySpreadsheetPaste, handlePaste, handleFocusin, getScoreReviewGross, isScorePendingReview, confirmScore, showView, scrollToTop, isBackToTopViewActive, setupBackToTopVisibility, persistAndRender, render, getActiveSimulationMode, setSimulator2Mode, renderLight, renderTournamentForm, setOperatorLinkStatus, normalizeOperatorTournament, getOperatorTournamentListSignature, applyOperatorTournamentToState, loadOperatorTournaments, linkOperatorTournament, setValue, playerMatchesSearch, tourSystemMatchMatchesSearch, getScoreToParMeta, renderScoreEntryHeaderCell, ensureScoreFlyHeader, getScoreFlyHeaderTop, rebuildScoreFlyHeader, invalidateScoreFlyHeader, resetScoreFlyHeader, bindScoreTableViewport, renderScoreEntryTable, renderMobileScoreHeader, renderMobileScoreEntry, renderScoreRow, getLeaderboardRowKey, captureLeaderboardRowPositions, animateLeaderboardRows, updateLeaderboardViewportState, syncOperatorBridgeData, renderSummary, setText, renderPlan, getShareSlugInput, isLocalShareSlugLocked, ensureLocalShareSlugFromTournament, buildShareUrl, setRosterPublishBusy, triggerAutoPublishRefreshEffect, downloadRuntimeFile, copyTextFromShareInput, exportWorkspaceBackup, importWorkspaceBackupFile, getStaticLiveDocument, exportStaticLivePage, copyShareUrl, syncRosterImportFileName, renderWarnings, summarizeParticipantImport, renderRosterImportReview, setSettingsStatus, renderServiceSettings, loadServiceSettings, saveServiceSettings, clearServiceApiKey, checkSupabaseStatus };
+  return { getCapabilities, readPositiveInt, clampMs, getOperatorScorePollSeconds, escapeHtml, cleanText, normalizeOperationNote, prefixOperationNote, stripAccents, normalizeSearchText, keyText, normalizeVgaId, hasSystem36RosterMarker, extractStartHoleNumber, cloneScoreMap, findRestorableScoreMap, playerMatchesPublicGolfId, isSameGolferIdentity, nameSimilarity, appendPendingScore, getEffectivePendingScoreHole, getScoreKey, hasAnyLocalScoreRecord, hasAnyConfirmedPublicScoreRecord, snapshotHasConfirmedPublicScores, hasPublishableLeaderboardData, loadOperatorCatalogOnDemand, startLinkedRuntimeServices, renderOperationModeVisibility, finishLinkedTournamentEntry, hydrateControls, bindEvents, getTooltipText, showTouchTooltip, handleTouchTooltipPointerDown, applyCollapsiblePanelState, restoreSearchFocus, applyScopedSearchQuery, applyMobileOverviewPanelState, preserveMobileDashboardScrollAnchor, setMobileDashboardOverviewCollapsed, syncMobileDashboardOverviewForViewport, handleDoubleClick, getScoreGridRows, handleScoreGridKeydown, handleInput, handleChange, handleSearchBlur, handleSearchPointerDown, getNormalizedCaddyNumber, recomputeCaddyDuplicates, syncCaddyDuplicateClasses, handleBlur, applySpreadsheetPaste, handlePaste, handleFocusin, getScoreReviewGross, isScorePendingReview, confirmScore, showView, scrollToTop, isBackToTopViewActive, setupBackToTopVisibility, persistAndRender, render, getActiveSimulationMode, setSimulator2Mode, renderLight, renderTournamentForm, setOperatorLinkStatus, normalizeOperatorTournament, getOperatorTournamentListSignature, applyOperatorTournamentToState, loadOperatorTournaments, linkOperatorTournament, setValue, playerMatchesSearch, tourSystemMatchMatchesSearch, getScoreToParMeta, renderScoreEntryHeaderCell, ensureScoreFlyHeader, getScoreFlyHeaderTop, rebuildScoreFlyHeader, invalidateScoreFlyHeader, resetScoreFlyHeader, bindScoreTableViewport, renderScoreEntryTable, renderMobileScoreHeader, renderMobileScoreEntry, renderScoreRow, getLeaderboardRowKey, captureLeaderboardRowPositions, animateLeaderboardRows, updateLeaderboardViewportState, syncOperatorBridgeData, renderSummary, setText, renderPlan, getShareSlugInput, isLocalShareSlugLocked, ensureLocalShareSlugFromTournament, buildShareUrl, setRosterPublishBusy, triggerAutoPublishRefreshEffect, downloadRuntimeFile, downloadRuntimeBlob, copyTextFromShareInput, exportWorkspaceBackup, importWorkspaceBackupFile, getStaticLiveDocument, exportStaticLivePage, copyShareUrl, syncRosterImportFileName, renderWarnings, summarizeParticipantImport, renderRosterImportReview, setSettingsStatus, renderServiceSettings, loadServiceSettings, saveServiceSettings, clearServiceApiKey, checkSupabaseStatus };
 })();
