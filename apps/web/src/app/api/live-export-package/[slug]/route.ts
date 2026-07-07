@@ -138,7 +138,7 @@ function buildLiveConfigScript(input: {
       tournamentState: `/api/tournament-state/${encodedSlug}`,
       snapshots: `/snapshots/${encodedSlug}`,
     },
-    source: "Leaderboard Pro Mode 0 live React export",
+    source: "Leaderboard Pro Mode 1 live React export",
   };
 
   return `window.ENV = {
@@ -488,7 +488,7 @@ function buildPackageJson() {
       private: true,
       name: "leaderboard-pro-live-export",
       version: "1.0.0",
-      description: "Self-hosted Leaderboard Pro Mode 0 live React package with same-origin GO snapshot proxy.",
+      description: "Self-hosted Leaderboard Pro Mode 1 live React package with same-origin GO snapshot proxy.",
       scripts: {
         start: "node server.js",
       },
@@ -581,7 +581,7 @@ function buildReadme(input: {
   snapshotServerBaseUrl: string;
   exportedAt: string;
 }) {
-  return `Leaderboard Pro - Mode 0 live React export
+  return `Leaderboard Pro - Mode 1 live React export
 
 Slug: ${input.slug}
 Exported at: ${input.exportedAt}

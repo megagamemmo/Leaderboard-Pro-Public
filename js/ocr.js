@@ -728,7 +728,7 @@
       return "Server google đang tạm thời quá tải. Thử lại sau";
     }
     if (/leaderboard_scorecard_paid_order_required|leaderboard_scorecard_package_required/i.test(raw)) {
-      return "OCR scorecard bằng Gemini server chỉ mở cho tournament đã có order paid Mode 1 trở lên.";
+      return "OCR scorecard bằng Gemini server chỉ mở cho tournament đã có order paid Mode 2 trở lên.";
     }
     if (/leaderboard_scorecard_private_code_required|login_required/i.test(raw)) {
       return "Hãy mở đúng tournament bằng private code trước khi dùng OCR scorecard online.";
