@@ -3468,11 +3468,25 @@ p {
   color: var(--accent);
 }
 
-.simulator-grid {
-  align-items: start;
+#view-simulator.active {
   display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+  gap: 20px;
+}
+
+#view-simulator .section-head {
+  margin-bottom: 0;
+}
+
+#view-simulator .panel + .panel,
+#view-simulator > .panel + .panel {
+  margin-top: 0;
+}
+
+.simulator-grid {
+  align-items: stretch;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(520px, 0.96fr) minmax(340px, 1.04fr);
 }
 
 .simulator2-grid {
@@ -3483,6 +3497,8 @@ p {
 }
 
 .simulator-settings-panel,
+.simulator-progress-panel,
+.simulator-report-panel,
 .simulator-log-panel {
   display: grid;
   gap: 16px;
@@ -3499,6 +3515,10 @@ p {
   align-items: center;
 }
 
+#view-simulator .panel-title {
+  margin-bottom: 0;
+}
+
 #simulator-state-badge {
   background: var(--accent-subtle);
   border: 1px solid rgba(16, 185, 129, 0.26);
@@ -3513,6 +3533,30 @@ p {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#simulator-form .form-actions {
+  align-items: start;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+#simulator-form .form-actions [data-simulator-action="create"] {
+  grid-column: span 2;
+}
+
+#simulator-form .form-actions button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1.15;
+  min-height: 52px;
+  min-width: 0;
+  padding: 10px 8px;
+  text-align: center;
+  white-space: normal;
+  width: 100%;
 }
 
 .simulator2-settings-grid {
@@ -3713,8 +3757,25 @@ p {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 0;
   padding: 12px;
+}
+
+.simulator-metrics > div {
+  min-height: 50px;
+  padding: 12px;
+}
+
+.simulator-metrics > div:first-child {
+  grid-column: 1 / -1;
+}
+
+.simulator-metrics span {
+  font-size: 0.68rem;
+  margin-bottom: 6px;
 }
 
 .simulator2-metrics {
@@ -4208,6 +4269,50 @@ p {
 
   .leaderboard-summary-grid {
     grid-template-columns: 54px minmax(220px, 1fr) 48px 48px 56px 44px 60px;
+  }
+}
+
+@media (max-width: 1180px) {
+  #view-simulator .simulator-metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  #view-simulator .simulator-metrics > div:first-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  #view-simulator.active {
+    gap: 18px;
+  }
+
+  #simulator-form .form-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #simulator-form .form-actions [data-simulator-action="create"] {
+    grid-column: 1 / -1;
+  }
+
+  #simulator-form .form-actions button {
+    min-height: 44px;
+  }
+
+  #view-simulator .simulator-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #view-simulator .simulator-metrics > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 420px) {
+  #simulator-form .form-actions button {
+    font-size: 0.88rem;
+    min-height: 42px;
+    padding-inline: 6px;
   }
 }
 
@@ -6459,155 +6564,3 @@ dialog.modal::backdrop {
     font-size: 0.48rem;
   }
 }
-
-/* Public simulator layout */
-#view-simulator.public-simulator-view {
-  margin-inline: auto;
-  max-width: 1220px;
-}
-
-#view-simulator.public-simulator-view .section-head {
-  align-items: end;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-#view-simulator.public-simulator-view .section-head h1 {
-  max-width: min(100%, 760px);
-}
-
-#view-simulator.public-simulator-view .head-actions .secondary-button {
-  min-height: 44px;
-  white-space: nowrap;
-}
-
-#view-simulator.public-simulator-view .simulator-grid {
-  align-items: stretch;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(540px, 1.12fr) minmax(300px, 0.88fr);
-}
-
-#view-simulator.public-simulator-view .simulator-settings-panel,
-#view-simulator.public-simulator-view .simulator-progress-panel,
-#view-simulator.public-simulator-view .simulator-log-panel {
-  display: grid;
-  gap: 14px;
-}
-
-#view-simulator.public-simulator-view .panel-title {
-  margin-bottom: 0;
-}
-
-#view-simulator.public-simulator-view .simulator-settings-grid {
-  gap: 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-#view-simulator.public-simulator-view #simulator-form .form-actions {
-  align-items: start;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-}
-
-#view-simulator.public-simulator-view #simulator-form .form-actions [data-simulator-action="create"] {
-  grid-column: span 2;
-}
-
-#view-simulator.public-simulator-view #simulator-form .form-actions button {
-  align-items: center;
-  display: inline-flex;
-  justify-content: center;
-  line-height: 1.15;
-  min-height: 52px;
-  min-width: 0;
-  padding: 10px 8px;
-  text-align: center;
-  white-space: normal;
-  width: 100%;
-}
-
-#view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-#view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics > div {
-  min-height: 50px;
-  padding: 12px;
-}
-
-#view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics > div:first-child {
-  grid-column: 1 / -1;
-}
-
-#view-simulator.public-simulator-view .simulator-progress-panel .rule-table span {
-  font-size: 0.68rem;
-  margin-bottom: 6px;
-}
-
-#view-simulator.public-simulator-view .simulator-roster,
-#view-simulator.public-simulator-view .simulator-log {
-  min-height: 76px;
-}
-
-@media (max-width: 1060px) {
-  #view-simulator.public-simulator-view .simulator-grid {
-    grid-template-columns: 1fr;
-  }
-
-  #view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  #view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics > div:first-child {
-    grid-column: auto;
-  }
-}
-
-@media (max-width: 760px) {
-  #view-simulator.public-simulator-view .section-head {
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  #view-simulator.public-simulator-view .head-actions,
-  #view-simulator.public-simulator-view .head-actions .secondary-button {
-    width: 100%;
-  }
-
-  #view-simulator.public-simulator-view .simulator-settings-grid {
-    grid-template-columns: 1fr;
-  }
-
-  #view-simulator.public-simulator-view #simulator-form .form-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #view-simulator.public-simulator-view #simulator-form .form-actions [data-simulator-action="create"] {
-    grid-column: 1 / -1;
-  }
-
-  #view-simulator.public-simulator-view #simulator-form .form-actions button {
-    min-height: 44px;
-  }
-
-  #view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #view-simulator.public-simulator-view .simulator-progress-panel .simulator-metrics > div:first-child {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 420px) {
-  #view-simulator.public-simulator-view #simulator-form .form-actions button {
-    font-size: 0.88rem;
-    min-height: 42px;
-    padding-inline: 6px;
-  }
-}
-
