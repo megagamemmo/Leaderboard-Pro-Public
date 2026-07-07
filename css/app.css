@@ -6505,9 +6505,14 @@ dialog.modal::backdrop {
 }
 
 #view-simulator.public-simulator-view #simulator-form .form-actions {
+  align-items: stretch;
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+#view-simulator.public-simulator-view #simulator-form .form-actions [data-simulator-action="create"] {
+  grid-column: span 2;
 }
 
 #view-simulator.public-simulator-view #simulator-form .form-actions button {
