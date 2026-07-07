@@ -1938,7 +1938,7 @@ async function exportStaticLivePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           snapshot,
-          snapshotServerUrl: String(window.ENV?.LOCAL_SNAPSHOT_SERVER_URL || "").trim()
+          snapshotServerUrl: normalizeSnapshotServerUrlForExport(window.ENV?.LOCAL_SNAPSHOT_SERVER_URL)
         })
       });
       if (!response.ok) {
@@ -1957,6 +1957,23 @@ async function exportStaticLivePage() {
       console.error("[LiveExport] Failed to export live React package", err);
       window.LB.appUtils.setOperatorLinkStatus("Chưa xuất được gói live React.", "error");
       alert(`Chưa xuất được gói live React: ${err.message || err}`);
+    }
+  }
+
+  function normalizeSnapshotServerUrlForExport(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, window.location.href);
+      const hostname = url.hostname.toLowerCase();
+      if (hostname === "0.0.0.0" || hostname === "::" || hostname === "[::]") return "";
+      if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+      url.pathname = url.pathname.replace(/\/+$/, "");
+      url.search = "";
+      url.hash = "";
+      return url.toString().replace(/\/+$/, "");
+    } catch {
+      return "";
     }
   }
 
