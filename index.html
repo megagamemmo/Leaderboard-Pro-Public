@@ -19,6 +19,7 @@
       <button type="button" data-action="show-view" data-view="integration" data-requires-ts36="true">Liên kết</button>
       <button type="button" data-action="show-view" data-view="imports">Nhập điểm</button>
       <button type="button" data-action="show-view" data-view="leaderboard">Xếp hạng</button>
+      <button type="button" data-action="show-view" data-view="simulator">Giả lập</button>
       <button type="button" data-action="show-view" data-view="settings">Cấu hình</button>
     </nav>
     <div class="topbar-actions">
@@ -26,6 +27,10 @@
       <button id="theme-toggle" class="icon-button" type="button" title="Đổi giao diện" aria-label="Đổi giao diện">◐</button>
     </div>
   </header>
+
+  <div id="simulator-local-only-warning" class="simulator-local-only-warning" role="status" hidden>
+    Simulator local-only, không ghi cloud
+  </div>
 
   <button id="back-to-top-fab" class="back-to-top-fab" type="button" data-action="back-to-top" aria-label="Lên đầu trang">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
@@ -435,6 +440,119 @@
       </div>
     </section>
 
+    <section id="view-simulator" class="view" aria-labelledby="simulator-title">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Local-only Tester</span>
+          <h1 id="simulator-title">Giả lập livescore tournament</h1>
+        </div>
+        <div class="head-actions">
+          <button type="button" class="secondary-button" data-simulator-action="cleanup">Trả trạng thái thật</button>
+        </div>
+      </div>
+      <div class="simulator-grid">
+        <form id="simulator-form" class="panel simulator-settings-panel">
+          <div class="panel-title">
+            <h2>Kịch bản</h2>
+            <span id="simulator-state-badge">Local-only</span>
+          </div>
+          <div class="simulator-settings-grid">
+            <label>
+              Golfer ảo
+              <input id="sim-player-count" type="number" min="6" max="288" step="1" value="25">
+            </label>
+            <label>
+              Tài khoản TS36 ảo
+              <input id="sim-ts36-count" type="number" min="0" max="288" step="1" value="25">
+            </label>
+            <label>
+              Nhịp chạy simulator
+              <input id="sim-live-seconds" type="number" min="1" max="120" step="1" value="5">
+            </label>
+            <label>
+              Tổng viewer live ước tính
+              <input id="sim-viewer-count" type="number" min="0" max="10000" step="1" placeholder="Tự lấy theo số golfer">
+            </label>
+            <label>
+              Thời lượng giải thật
+              <input id="sim-production-hours" type="number" min="1" max="12" step="0.5" value="6">
+            </label>
+            <fieldset class="simulator-viewer-fieldset">
+              <legend>Cơ cấu viewer</legend>
+              <label>
+                Trực tiếp xuyên suốt (GO/TV)
+                <input id="sim-viewer-direct-full" type="number" min="0" max="10000" step="1" placeholder="Auto">
+              </label>
+              <label>
+                Trực tiếp gián đoạn (golfer/người nhà)
+                <input id="sim-viewer-direct-burst" type="number" min="0" max="10000" step="1" placeholder="Auto">
+              </label>
+              <label>
+                Gián tiếp xuyên suốt (caddy/team)
+                <input id="sim-viewer-indirect-full" type="number" min="0" max="10000" step="1" placeholder="Auto">
+              </label>
+              <label>
+                Gián tiếp gián đoạn (live/app)
+                <input id="sim-viewer-indirect-burst" type="number" min="0" max="10000" step="1" placeholder="Auto">
+              </label>
+            </fieldset>
+            <label>
+              Biến động thứ hạng
+              <select id="sim-volatility">
+                <option value="1">1 - Êm</option>
+                <option value="2">2</option>
+                <option value="3">3 - Vừa</option>
+                <option value="4" selected>4</option>
+                <option value="5">5 - Mạnh</option>
+              </select>
+            </label>
+            <label>
+              Phạm vi bảng
+              <select id="sim-scope">
+                <option value="only_s36">Chỉ bảng S36</option>
+                <option value="exclude_s36">Không gồm bảng S36</option>
+                <option value="all" selected>Toàn bộ</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="secondary-button" data-simulator-action="create">Tạo tournament ảo</button>
+            <button type="button" class="primary-button" data-simulator-action="step">Step 1 nhịp</button>
+            <button type="button" class="secondary-button" data-simulator-action="run">Chạy auto</button>
+            <button id="simulator-pause-button" type="button" class="secondary-button" data-simulator-action="pause" disabled>Tạm dừng</button>
+            <button type="button" class="secondary-button" data-simulator-action="save-history" title="Xuất event log thành file TXT">Lưu history</button>
+          </div>
+          <div id="simulator-status" class="operator-link-status">Chưa tạo kịch bản.</div>
+        </form>
+
+        <article class="panel">
+          <h2>Tiến trình</h2>
+          <div class="rule-table simulator-metrics">
+            <div><span>Turn</span><b id="sim-turn">0 / 18</b></div>
+            <div><span>Pha</span><b id="sim-phase">Idle</b></div>
+            <div><span>Golfer</span><b id="sim-golfer-count">0</b></div>
+            <div><span>TS36 user</span><b id="sim-user-count">0</b></div>
+            <div><span>Log</span><b id="sim-log-count">0</b></div>
+          </div>
+          <div id="simulator-roster" class="simulator-roster"></div>
+        </article>
+      </div>
+      <section class="panel simulator-report-panel">
+        <div class="panel-title">
+          <h2>Báo cáo vận hành ước tính</h2>
+          <span id="sim-resource-state">Chưa có dữ liệu</span>
+        </div>
+        <div id="simulator-resource-report" class="simulator-resource-report"></div>
+      </section>
+      <section class="panel simulator-log-panel">
+        <div class="panel-title">
+          <h2>Event log</h2>
+          <span id="sim-history-state">Event log · TXT</span>
+        </div>
+        <div id="simulator-log" class="simulator-log"></div>
+      </section>
+    </section>
+
     <section id="view-settings" class="view" aria-labelledby="settings-title">
       <div class="section-head">
         <div>
@@ -591,6 +709,7 @@
   <script src="js/app-ocr.js?v=refactor"></script>
   <script src="js/app-print.js?v=refactor"></script>
   <script src="js/app.js?v=20260627-gemini-scorecard-v11"></script>
+  <script src="js/simulator.js?v=20260619-share-slug"></script>
   <dialog id="ocr-identity-modal" class="modal">
     <div class="modal-header">
       <h2>Ghép golfer: <span id="ocr-match-title-name"></span></h2>

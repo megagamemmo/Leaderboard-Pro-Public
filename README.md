@@ -4,7 +4,7 @@ Production-clean source for Leaderboard Pro.
 
 This public project intentionally excludes local developer state, agent instructions,
 MCP/Codex/Cursor settings, tests, artifacts, logs, private env files, Vercel links,
-node_modules, and local simulator/admin tooling.
+node_modules, simulator2/admin lab tooling, and local-only development services.
 
 Runtime modes:
 
