@@ -2290,7 +2290,6 @@
       if (!fileArray.length) throw new Error("Chưa chọn file import.");
 
       window.LB.lastOcrScorecards = [];
-      let totalQuota = 0;
       let completed = 0;
       
       window.LB.appOcr.renderOcrReview([], "scorecards");
@@ -2310,8 +2309,6 @@
           });
 
           const rows = window.LB.ocr.normalizeScorecards(singleResult);
-          totalQuota += Number(singleResult?.scorecardQuotaUnits ?? singleResult?.scorecardCount ?? rows.length) || rows.length;
-          
           applyChain = applyChain.then(async () => {
              await window.LB.ocr.applyOcrRowsToState(rows, { onIdentityMismatch: window.LB.appOcr.promptOcrIdentityMatch });
              state().imports.unshift({
@@ -2355,7 +2352,7 @@
       setOcrBusy(
         false,
         window.LB.lastOcrScorecards.length
-          ? `OCR xong ${completed}/${fileCount} ảnh và đã nhập ${window.LB.lastOcrScorecards.length} scorecard vào staging. Tính ${totalQuota} lượt scorecard. Kiểm tra lại điểm trong phần review.`
+          ? `OCR xong ${completed}/${fileCount} ảnh và đã nhập ${window.LB.lastOcrScorecards.length} scorecard vào staging. Kiểm tra lại điểm trong phần review.`
           : `OCR xong ${completed}/${fileCount} ảnh nhưng chưa nhận diện được scorecard nào.`
       );
     } catch (err) {

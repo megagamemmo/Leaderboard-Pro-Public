@@ -692,6 +692,12 @@
   const GEMINI_SCORECARD_MAX_BYTES = 1200 * 1024;
   const GEMINI_SCORECARD_DETAIL_TARGET_BYTES = 220 * 1024;
   const GEMINI_SCORECARD_MAX_DETAIL_IMAGES = 4;
+  const GEMINI_SCORECARD_MODEL_OPTIONS = ["gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+
+  function normalizeGeminiScorecardModel(value) {
+    const model = cleanText(value).replace(/^models\//i, "");
+    return GEMINI_SCORECARD_MODEL_OPTIONS.includes(model) ? model : "gemini-3.5-flash";
+  }
 
   function deriveGeminiScorecardEndpoint(env = window.ENV || {}) {
     const configured = cleanText(env.GEMINI_SCORECARD_ENDPOINT || env.SCORECARD_OCR_ENDPOINT);
@@ -720,6 +726,15 @@
       || /(?:overload|overloaded|unavailable|503|temporarily|server is busy|model is overloaded)/i.test(raw)
     ) {
       return "Server google đang tạm thời quá tải. Thử lại sau";
+    }
+    if (/leaderboard_scorecard_paid_order_required|leaderboard_scorecard_package_required/i.test(raw)) {
+      return "OCR scorecard bằng Gemini server chỉ mở cho tournament đã có order paid Mode 1 trở lên.";
+    }
+    if (/leaderboard_scorecard_private_code_required|login_required/i.test(raw)) {
+      return "Hãy mở đúng tournament bằng private code trước khi dùng OCR scorecard online.";
+    }
+    if (status === 402 || /operator_scorecard_ocr_quota_exceeded|quota_exceeded|limit/i.test(raw)) {
+      return "Tournament này đã đạt giới hạn OCR scorecard của gói hiện tại.";
     }
     return raw || `Gemini scorecard OCR lỗi ${status || "unknown"}`;
   }
@@ -1306,7 +1321,7 @@
     const localApiKey = document.getElementById("settings-gemini-key")?.value || localStorage.getItem("lb_gemini_api_key");
 
     if (!isCloudMode && localApiKey) {
-      const model = document.getElementById("settings-gemini-model")?.value || "gemini-3.1-flash-lite";
+      const model = normalizeGeminiScorecardModel(document.getElementById("settings-gemini-model")?.value);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(localApiKey)}`;
       
       const promptText = buildDirectGeminiPrompt(options.context || {}, images, "scorecard");

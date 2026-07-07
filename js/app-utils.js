@@ -2096,9 +2096,16 @@ function setSettingsStatus(message, mode = "") {
     if (stateEl) stateEl.textContent = message;
   }
 
+function normalizeGeminiSettingsModel(value) {
+    const model = String(value || "").trim().replace(/^models\//i, "");
+    return ["gemini-3.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash"].includes(model)
+      ? model
+      : "gemini-3.5-flash";
+  }
+
 function renderServiceSettings(data = {}) {
     window.LB.appUtils.setValue("settings-local-ocr-endpoint", window.ENV?.LOCAL_OCR_ENDPOINT || "http://localhost:8866/ocr");
-    window.LB.appUtils.setValue("settings-gemini-model", data.gemini_model || "gemini-3.1-flash-lite");
+    window.LB.appUtils.setValue("settings-gemini-model", normalizeGeminiSettingsModel(data.gemini_model));
     window.LB.appUtils.setValue("settings-paddle-device", data.paddle_device || "auto");
     window.LB.appUtils.setValue("settings-paddle-cpu-threads", data.paddle_cpu_threads || "");
     const mkldnn = document.getElementById("settings-paddle-mkldnn");
@@ -2150,7 +2157,7 @@ async function loadServiceSettings(notify = false) {
 
 async function saveServiceSettings() {
     const key = document.getElementById("settings-gemini-key")?.value || "";
-    const model = document.getElementById("settings-gemini-model")?.value || "gemini-3.1-flash-lite";
+    const model = normalizeGeminiSettingsModel(document.getElementById("settings-gemini-model")?.value);
     const paddleDevice = document.getElementById("settings-paddle-device")?.value || "auto";
     const paddleCpuThreads = document.getElementById("settings-paddle-cpu-threads")?.value || "";
     const paddleMkldnn = !!document.getElementById("settings-paddle-mkldnn")?.checked;
@@ -2165,7 +2172,7 @@ async function saveServiceSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           gemini_api_key: key.trim(),
-          gemini_model: model.trim(),
+          gemini_model: model,
           paddle_device: paddleDevice,
           paddle_cpu_threads: paddleCpuThreads,
           paddle_enable_mkldnn: paddleMkldnn
@@ -2193,11 +2200,11 @@ async function clearServiceApiKey() {
     if (!confirm("Xóa Google API Key khỏi file cấu hình local?")) return;
     localStorage.removeItem("lb_gemini_api_key");
     try {
-      const model = document.getElementById("settings-gemini-model")?.value || "gemini-3.1-flash-lite";
+      const model = normalizeGeminiSettingsModel(document.getElementById("settings-gemini-model")?.value);
       const response = await fetch(window.LB.appOcr.getOcrConfigUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clear_gemini_api_key: true, gemini_model: model.trim() })
+        body: JSON.stringify({ clear_gemini_api_key: true, gemini_model: model })
       });
       if (!response.ok) throw new Error(`Không xóa được key (${response.status}).`);
       const data = await response.json();

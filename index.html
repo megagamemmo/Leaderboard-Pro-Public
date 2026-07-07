@@ -613,7 +613,12 @@
           <div id="settings-paddle-status" class="operator-link-status">Chưa kiểm tra PaddleOCR.</div>
           <label>
             Gemini model
-            <input id="settings-gemini-model" type="text" autocomplete="off" placeholder="gemini-2.5-flash-lite">
+            <select id="settings-gemini-model">
+              <option value="gemini-3.5-flash" selected>gemini-3.5-flash</option>
+              <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+              <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+            </select>
           </label>
             <label>
             Google API Key
