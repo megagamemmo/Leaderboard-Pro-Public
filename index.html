@@ -468,35 +468,7 @@
             <label>
               Nhịp chạy simulator
               <input id="sim-live-seconds" type="number" min="1" max="120" step="1" value="5">
-            </label>
-            <label>
-              Tổng viewer live ước tính
-              <input id="sim-viewer-count" type="number" min="0" max="10000" step="1" placeholder="Tự lấy theo số golfer">
-            </label>
-            <label>
-              Thời lượng giải thật
-              <input id="sim-production-hours" type="number" min="1" max="12" step="0.5" value="6">
-            </label>
-            <fieldset class="simulator-viewer-fieldset">
-              <legend>Cơ cấu viewer</legend>
-              <label>
-                Trực tiếp xuyên suốt (GO/TV)
-                <input id="sim-viewer-direct-full" type="number" min="0" max="10000" step="1" placeholder="Auto">
-              </label>
-              <label>
-                Trực tiếp gián đoạn (golfer/người nhà)
-                <input id="sim-viewer-direct-burst" type="number" min="0" max="10000" step="1" placeholder="Auto">
-              </label>
-              <label>
-                Gián tiếp xuyên suốt (caddy/team)
-                <input id="sim-viewer-indirect-full" type="number" min="0" max="10000" step="1" placeholder="Auto">
-              </label>
-              <label>
-                Gián tiếp gián đoạn (live/app)
-                <input id="sim-viewer-indirect-burst" type="number" min="0" max="10000" step="1" placeholder="Auto">
-              </label>
-            </fieldset>
-            <label>
+            </label>            <label>
               Biến động thứ hạng
               <select id="sim-volatility">
                 <option value="1">1 - Êm</option>
@@ -537,13 +509,6 @@
           <div id="simulator-roster" class="simulator-roster"></div>
         </article>
       </div>
-      <section class="panel simulator-report-panel">
-        <div class="panel-title">
-          <h2>Báo cáo vận hành ước tính</h2>
-          <span id="sim-resource-state">Chưa có dữ liệu</span>
-        </div>
-        <div id="simulator-resource-report" class="simulator-resource-report"></div>
-      </section>
       <section class="panel simulator-log-panel">
         <div class="panel-title">
           <h2>Event log</h2>

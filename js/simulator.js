@@ -1000,245 +1000,7 @@
   }
 
   function estimateResourceReport() {
-    const sim = state().simulator;
-    if (!sim?.active) return null;
-    const telemetry = sim.telemetry || {};
-    const config = sim.config || {};
-    const players = state().players || [];
-    const matches = state().ts36Matches || [];
-    const playerCount = players.length;
-    const ts36UserCount = matches.length;
-    const s36PlayerCount = players.filter(player => /^S36\b/i.test(player.division || "")).length;
-    const whsPlayerCount = players.filter(player => /^Nam\b/i.test(player.division || "")).length;
-    const viewerCount = cleanInt(config.viewerCount, 0, 10000, Math.max(playerCount, Math.round(playerCount * 1.8)));
-    const viewerSegments = normalizeViewerSegments(viewerCount, config.viewerSegments);
-    const viewerTotal = Object.values(viewerSegments).reduce((sum, value) => sum + value, 0);
-    const tickCount = (sim.currentTurn * 2) + (sim.pendingTurn ? 1 : 0);
-    const simulatedSeconds = tickCount * (config.liveSeconds || 5);
-    const fullRunSeconds = sim.totalTurns * 2 * (config.liveSeconds || 5);
-    const productionHours = cleanFloat(config.productionHours, 1, 12, 6);
-    const productionSeconds = Math.round(productionHours * 3600);
-    const productionScoreSeconds = cleanInt(
-      document.getElementById("operator-score-poll-seconds")?.value ??
-        Math.round((state().operator?.scorePollMs || getEnvMs("OPERATOR_SCORE_POLL_MS", 10000)) / 1000),
-      3,
-      300,
-      10
-    );
-    const productionLiveSeconds = cleanInt(
-      document.getElementById("operator-auto-live-seconds")?.value ??
-        Math.round((state().operator?.snapshotAutoPublishMs || getEnvMs("OPERATOR_SNAPSHOT_AUTO_PUBLISH_MS", 300000)) / 1000),
-      5,
-      300,
-      300
-    );
-    const publicCacheSeconds = getEnvSeconds("PUBLIC_LEADERBOARD_REVALIDATE_SECONDS", Math.min(60, productionLiveSeconds), 1, 300);
-    const scorePollMs = productionScoreSeconds * 1000;
-    const participantPollMs = getEnvMs("OPERATOR_PARTICIPANT_POLL_MS", 60000);
-    const publicPollMs = productionLiveSeconds * 1000;
-    const scorePollCycles = Math.ceil((productionSeconds * 1000) / scorePollMs);
-    const participantPollCycles = Math.ceil((productionSeconds * 1000) / participantPollMs);
-    const publicPollCycles = Math.ceil((productionSeconds * 1000) / publicPollMs);
-    const simulatedPlayerIds = new Set(
-      (sim.scenario?.players || []).filter(player => player.simulate).map(player => player.id)
-    );
-    const linkedSimulatedPlayers = matches.filter(match => simulatedPlayerIds.has(match.linkedPlayerId)).length;
-    const officialScoreConfirms = simulatedPlayerIds.size * sim.totalTurns;
-    const ts36ScoreWrites = linkedSimulatedPlayers * sim.totalTurns;
-    const operatorDraftScores = Math.max(0, officialScoreConfirms - ts36ScoreWrites);
-    const observedConflictRate = telemetry.ts36ScoreWrites
-      ? (telemetry.conflictFixes || 0) / telemetry.ts36ScoreWrites
-      : (1 / 17);
-    const conflictFixes = Math.ceil(ts36ScoreWrites * Math.max(0.01, Math.min(0.2, observedConflictRate)));
-    const snapshotPublishes = officialScoreConfirms ? Math.min(publicPollCycles, officialScoreConfirms) : 0;
-    const rosterPublishes = telemetry.rosterPublishEvents || 1;
-    const matchReviewEvents = telemetry.matchReviewEvents || ts36UserCount;
-    const logsCreated = matchReviewEvents + officialScoreConfirms + ts36ScoreWrites + operatorDraftScores + snapshotPublishes + conflictFixes + 12;
-    const alerts = conflictFixes;
-    const currentSnapshot = window.LB.scoring.buildPublicSnapshot(state());
-    const snapshotBytes = telemetry.lastSnapshotBytes || estimateJsonBytes(currentSnapshot);
-    const apiSnapshotBytes = Math.ceil((snapshotBytes + NEXT_PUBLIC_API_OVERHEAD_BYTES) * NEXT_PUBLIC_API_RANKING_MULTIPLIER);
-    const cumulativeSnapshotBytes = snapshotBytes * snapshotPublishes;
-    const rosterBytes = playerCount * 560;
-    const flightConfigBytes = estimateJsonBytes(state().flightConfig || {});
-    const tournamentMetadataBytes = estimateJsonBytes({ tournament: state().tournament, course: state().course, flightConfig: state().flightConfig });
-    const averageScoreRowsReturned = Math.ceil(ts36ScoreWrites / 2);
-    const intermittentCycles = Math.ceil(publicPollCycles * 0.25);
-    const directFullReads = viewerSegments.directFull * publicPollCycles;
-    const directBurstReads = viewerSegments.directBurst * intermittentCycles;
-    const indirectFullReads = viewerSegments.indirectFull * publicPollCycles;
-    const indirectBurstReads = viewerSegments.indirectBurst * intermittentCycles;
-    const directPublicReadRequests = directFullReads + directBurstReads;
-    const indirectPublicReadRequests = indirectFullReads + indirectBurstReads;
-    const publicReadRequests = directPublicReadRequests + indirectPublicReadRequests;
-    const ts36OpponentReadRequests = ts36UserCount * publicPollCycles;
-    const finalResultsViewLoads = viewerTotal;
-    const finalResultsEffectBytes = finalResultsViewLoads * FINAL_RESULTS_EFFECT_BYTES;
-    const awardAssetBytes = finalResultsViewLoads * AWARD_ASSET_COUNT * AWARD_ASSET_BYTES;
-    const directSupabaseFallback = /^(1|true|yes)$/i.test(String(window.ENV?.PUBLIC_SNAPSHOT_DIRECT_SUPABASE_FALLBACK || ""));
-
-    const dbStorage = {
-      tournament: 4096,
-      userLinks: ts36UserCount * 920,
-      participants: playerCount * 1180,
-      flightMetadata: flightConfigBytes,
-      bridgeRoster: rosterBytes,
-      scoreStaging: ts36ScoreWrites * 680,
-      officialScores: officialScoreConfirms * 560,
-      publicSnapshot: snapshotBytes,
-      metadata: tournamentMetadataBytes,
-      logs: logsCreated * 460,
-      alerts: alerts * 620
-    };
-    const dbTotal = Object.values(dbStorage).reduce((sum, value) => sum + value, 0);
-
-    const supabaseIngress = {
-      rosterSnapshot: rosterBytes * rosterPublishes,
-      ts36ScoreWrites: ts36ScoreWrites * 620,
-      matchReview: matchReviewEvents * 760,
-      officialConfirm: officialScoreConfirms * 520,
-      publicSnapshot: cumulativeSnapshotBytes
-    };
-    const supabaseEgress = {
-      scorePolls: scorePollCycles * averageScoreRowsReturned * 680,
-      participantPolls: participantPollCycles * playerCount * 720,
-      directPublicFallback: directSupabaseFallback ? (publicReadRequests + ts36OpponentReadRequests) * apiSnapshotBytes : 0
-    };
-    const supabaseIngressTotal = Object.values(supabaseIngress).reduce((sum, value) => sum + value, 0);
-    const supabaseEgressTotal = Object.values(supabaseEgress).reduce((sum, value) => sum + value, 0);
-
-    const vercelApiReads = publicReadRequests + ts36OpponentReadRequests;
-    const vercelRevalidates = snapshotPublishes + rosterPublishes;
-    const directPageLoads = viewerSegments.directFull + (viewerSegments.directBurst * 2);
-    const publicPageBytes = directPageLoads * NEXT_SHARE_PAGE_SHELL_BYTES;
-    const operatorPageBytes = 900 * 1024;
-    const ts36PageBytes = ts36UserCount * 360 * 1024;
-    const cachedSnapshotEgress = vercelApiReads * apiSnapshotBytes;
-    const vercelTotalEgress = publicPageBytes + operatorPageBytes + ts36PageBytes + cachedSnapshotEgress + finalResultsEffectBytes + awardAssetBytes;
-
-    const supabaseRequestTotal = (
-      rosterPublishes +
-      matchReviewEvents +
-      ts36ScoreWrites +
-      snapshotPublishes +
-      scorePollCycles +
-      participantPollCycles
-    );
-    const vercelRequestTotal = vercelApiReads + vercelRevalidates + directPageLoads + finalResultsViewLoads + 1;
-    const edgeFunctionInvocations = ts36UserCount;
-
-    return {
-      id: sim.id,
-      generatedAt: nowIso(),
-      summaryCards: [
-        { label: "Phiên production", value: formatDuration(productionSeconds), hint: `Simulator ${formatDuration(fullRunSeconds)} · sync ${productionScoreSeconds}s · live ${productionLiveSeconds}s` },
-        { label: "Golfer / TS36", value: `${formatNumber(playerCount)} / ${formatNumber(ts36UserCount)}`, hint: `${formatNumber(s36PlayerCount)} S36, ${formatNumber(whsPlayerCount)} WHS` },
-        { label: "Viewer live", value: formatNumber(viewerTotal), hint: `${formatNumber(viewerSegments.directFull + viewerSegments.directBurst)} trực tiếp, ${formatNumber(viewerSegments.indirectFull + viewerSegments.indirectBurst)} gián tiếp` },
-        { label: "API request ước tính", value: formatNumber(supabaseRequestTotal + vercelRequestTotal + edgeFunctionInvocations), hint: `${formatNumber(supabaseRequestTotal)} Supabase, ${formatNumber(vercelRequestTotal)} Vercel/API · không cộng row/action` },
-        { label: "DB at rest", value: formatBytes(dbTotal), hint: `Snapshot hiện tại ${formatBytes(snapshotBytes)}` }
-      ],
-      sections: [
-        {
-          title: "TS36 -> Supabase / Edge",
-          rows: [
-            ["Score write từ TS36", `${formatNumber(ts36ScoreWrites)} request · ${formatBytes(supabaseIngress.ts36ScoreWrites)}`],
-            ["Unlock/sync Edge Function", `${formatNumber(edgeFunctionInvocations)} invocation`],
-            ["User link / GO relink", `${formatNumber(matchReviewEvents)} RPC/upsert · ${formatBytes(supabaseIngress.matchReview)}`],
-            ["Đọc đối thủ qua Vercel cache", `${formatNumber(ts36OpponentReadRequests)} request · ${formatBytes(ts36OpponentReadRequests * apiSnapshotBytes)} · mỗi ${productionLiveSeconds}s`]
-          ]
-        },
-        {
-          title: "Leaderboard Pro -> Supabase",
-          rows: [
-            ["Poll điểm TS36", `${formatNumber(scorePollCycles)} RPC · ${formatBytes(supabaseEgress.scorePolls)} egress · mỗi ${productionScoreSeconds}s`],
-            ["Poll roster/participant", `${formatNumber(participantPollCycles)} RPC · ${formatBytes(supabaseEgress.participantPolls)} egress`],
-            ["Confirm official score", `${formatNumber(officialScoreConfirms)} row/action · ${formatBytes(supabaseIngress.officialConfirm)}`],
-            ["Publish snapshot/bridge", `${formatNumber(snapshotPublishes)} upsert tối đa · ${formatBytes(supabaseIngress.publicSnapshot)} · chỉ khi có điểm confirm`]
-          ]
-        },
-        {
-          title: "Vercel / CDN / Public",
-          rows: [
-            ["Viewer trực tiếp xuyên suốt", `${formatNumber(viewerSegments.directFull)} người · ${formatNumber(directFullReads)} read · ${formatBytes(directFullReads * apiSnapshotBytes)}`],
-            ["Viewer trực tiếp gián đoạn", `${formatNumber(viewerSegments.directBurst)} người · ${formatNumber(directBurstReads)} read · ${formatBytes(directBurstReads * apiSnapshotBytes)}`],
-            ["Viewer gián tiếp xuyên suốt", `${formatNumber(viewerSegments.indirectFull)} người · ${formatNumber(indirectFullReads)} read · ${formatBytes(indirectFullReads * apiSnapshotBytes)}`],
-            ["Viewer gián tiếp gián đoạn", `${formatNumber(viewerSegments.indirectBurst)} người · ${formatNumber(indirectBurstReads)} read · ${formatBytes(indirectBurstReads * apiSnapshotBytes)}`],
-            ["Revalidate calls", `${formatNumber(vercelRevalidates)} request`],
-            ["Initial page loads", `${formatNumber(directPageLoads + ts36UserCount + 1)} lượt · ${formatBytes(publicPageBytes + operatorPageBytes + ts36PageBytes)}`],
-            ["Final results view", `${formatNumber(finalResultsViewLoads)} lượt · ${formatBytes(finalResultsEffectBytes)}`],
-            ["Final results effects/assets", `${formatNumber(AWARD_ASSET_COUNT)} asset/lượt · ${formatBytes(awardAssetBytes)}`],
-            ["Tổng egress Vercel/CDN", formatBytes(vercelTotalEgress)]
-          ]
-        },
-        {
-          title: "Database storage ước tính",
-          rows: [
-            ["Tournament + course metadata", formatBytes(dbStorage.tournament + dbStorage.metadata + dbStorage.flightMetadata)],
-            ["User/link/bridge roster", formatBytes(dbStorage.userLinks + dbStorage.participants + dbStorage.bridgeRoster)],
-            ["Score staging + official", formatBytes(dbStorage.scoreStaging + dbStorage.officialScores)],
-            ["Live leaderboard snapshot row", formatBytes(dbStorage.publicSnapshot)],
-            ["Log/audit/alert", formatBytes(dbStorage.logs + dbStorage.alerts)]
-          ]
-        }
-      ],
-      raw: {
-        estimateMode: "production_extrapolation",
-        simulatedSeconds,
-        fullRunSeconds,
-        productionHours,
-        productionSeconds,
-        productionScoreSeconds,
-        productionLiveSeconds,
-        publicCacheSeconds,
-        playerCount,
-        ts36UserCount,
-        s36PlayerCount,
-        whsPlayerCount,
-        viewerCount: viewerTotal,
-        viewerSegments,
-        directPublicReadRequests,
-        indirectPublicReadRequests,
-        scorePollCycles,
-        participantPollCycles,
-        publicPollCycles,
-        ts36ScoreWrites,
-        operatorDraftScores,
-        officialScoreConfirms,
-        conflictFixes,
-        snapshotPublishes,
-        rosterPublishes,
-        publicReadRequests,
-        ts36OpponentReadRequests,
-        finalResultsViewLoads,
-        finalResultsEffectBytes,
-        awardAssetBytes,
-        edgeFunctionInvocations,
-        supabaseRequestTotal,
-        vercelRequestTotal,
-        dbStorageBytes: dbStorage,
-        dbTotalBytes: dbTotal,
-        supabaseIngressBytes: supabaseIngress,
-        supabaseEgressBytes: supabaseEgress,
-        supabaseIngressTotalBytes: supabaseIngressTotal,
-        supabaseEgressTotalBytes: supabaseEgressTotal,
-        vercelTotalEgressBytes: vercelTotalEgress,
-        snapshotBytes,
-        apiSnapshotBytes,
-        cumulativeSnapshotBytes,
-        logsCreated,
-        observedSimulator: {
-          tickCount,
-          currentTurn: sim.currentTurn,
-          ts36ScoreWrites: telemetry.ts36ScoreWrites || 0,
-          operatorDraftScores: telemetry.operatorDraftScores || 0,
-          officialScoreConfirms: telemetry.officialScoreConfirms || 0,
-          conflictFixes: telemetry.conflictFixes || 0,
-          snapshotPublishes: telemetry.snapshotPublishes || 0,
-          logsCreated: telemetry.logsCreated || 0
-        }
-      },
-      note: `Đây là ngoại suy production cho giải kéo dài ${productionHours} giờ, không dùng ${formatDuration(fullRunSeconds)} chạy nén của simulator để tính chi phí. Tổng score lấy đủ 18 hố; LB poll Supabase mỗi ${productionScoreSeconds}s; viewer và TS36 đọc snapshot qua route cache Vercel mỗi ${productionLiveSeconds}s, TTL API public ${publicCacheSeconds}s. Trang live React/Next.js hiện tính thêm SSR/RSC initial page load, JSON API đã có ranking/metadata, cache hit/miss, revalidate khi publish, award assets từ Supabase Storage, và một lượt mỗi viewer mở kết quả chung cuộc kèm hiệu ứng reveal cuối giải. Snapshot chỉ auto publish khi có điểm đã confirm, với mức trần một publish mỗi chu kỳ; vì vậy đây là ước tính bảo thủ. Nếu bật direct Supabase fallback cho public thì phần public read sẽ chuyển thành Supabase egress.`
-    };
+    return null;
   }
 
   function exportEventLog() {
@@ -1306,60 +1068,9 @@
     return sim.running ? "Auto" : "Ready";
   }
 
-  function exportReport(report, id = "simulation-report") {
-    if (!report) return;
-    const fileSafeId = String(id || report.id || "simulation-report").replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "") || "simulation-report";
-    const payload = JSON.stringify(report, null, 2);
-    const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${fileSafeId}-resource-report.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
+  function exportReport() {}
 
-  function renderResourceReport(report) {
-    const root = document.getElementById("simulator-resource-report");
-    const stateBadge = document.getElementById("sim-resource-state");
-    if (!root) return;
-    if (!report) {
-      if (stateBadge) stateBadge.textContent = "Chưa có dữ liệu";
-      root.innerHTML = `<div class="empty-state">Tạo tournament ảo để xem thống kê request, bandwidth và database.</div>`;
-      return;
-    }
-    if (stateBadge) stateBadge.textContent = "Ngoại suy production";
-    root.innerHTML = `
-      <div class="simulator-report-actions">
-        <button type="button" class="secondary-button compact" data-simulator-action="export-report" data-report-id="${escapeHtml(report.id || "")}">Xuất JSON</button>
-      </div>
-      <div class="simulator-report-summary">
-        ${report.summaryCards.map(card => `
-          <div class="simulator-report-card">
-            <small>${escapeHtml(card.label)}</small>
-            <strong>${escapeHtml(card.value)}</strong>
-            <span>${escapeHtml(card.hint)}</span>
-          </div>
-        `).join("")}
-      </div>
-      <div class="simulator-report-columns">
-        ${report.sections.map(section => `
-          <article class="simulator-report-table">
-            <h3>${escapeHtml(section.title)}</h3>
-            ${section.rows.map(([label, value]) => `
-              <div class="simulator-report-row">
-                <span>${escapeHtml(label)}</span>
-                <b>${escapeHtml(value)}</b>
-              </div>
-            `).join("")}
-          </article>
-        `).join("")}
-      </div>
-      <div class="simulator-report-note">${escapeHtml(report.note)}</div>
-    `;
-  }
+  function renderResourceReport() {}
 
   function getLogLabel(type = "info") {
     const labels = {
@@ -1398,9 +1109,8 @@
     setText("sim-log-count", String(logs.length));
     setText("simulator-state-badge", active ? (sim.running ? "Đang chạy" : (sim.autoStarted ? "Tạm dừng" : "Đang giữ state ảo")) : "Local-only");
     setText("simulator-status", active
-      ? `Scenario ${sim.id}. Nhịp simulator ${sim.config.liveSeconds}s, auto-run khoảng ${estimatedSeconds}s. Báo cáo ngoại suy ${sim.config.productionHours || 6}h theo cadence trong tab Cấu hình. Cleanup sẽ restore tournament thật từ backup local.`
+      ? `Scenario ${sim.id}. Nhịp simulator ${sim.config.liveSeconds}s, auto-run khoảng ${estimatedSeconds}s. Cleanup sẽ restore tournament thật từ backup local.`
       : "Chưa tạo kịch bản.");
-    renderResourceReport(active ? estimateResourceReport() : null);
 
     const isRunning = !!sim?.running;
     const autoStarted = !!sim?.autoStarted;
@@ -1503,10 +1213,6 @@
     if (action === "run") void run();
     if (action === "pause") togglePause();
     if (action === "save-history") exportEventLog();
-    if (action === "export-report") {
-      const reportId = target.dataset.reportId || state().simulator?.id || "simulation";
-      exportReport(estimateResourceReport(), reportId);
-    }
     if (action === "cleanup") {
       if (confirm("Trả lại trạng thái thật trước khi chạy simulator? Tournament ảo hiện tại sẽ bị xóa khỏi state đang mở.")) void cleanup();
     }
@@ -1563,3 +1269,4 @@
 
   document.addEventListener("DOMContentLoaded", init);
 })();
+
