@@ -515,6 +515,65 @@ p {
   outline: none;
 }
 
+/* Smooth collapse/expand transitions for panel contents */
+.player-list,
+.flight-config-controls,
+.flight-config-list,
+.flight-confirm-row,
+#flight-config-status,
+.operator-link-controls,
+.operator-link-status,
+.roster-import-controls,
+#roster-ocr-status,
+.roster-import-review-panel,
+.score-table-wrap,
+.final-results-content,
+.final-awards-body,
+.ocr-form-body {
+  max-height: 1600px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              margin 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Specific heights to eliminate transition lag */
+.flight-config-controls,
+.flight-confirm-row,
+#flight-config-status,
+.operator-link-controls,
+.operator-link-status,
+.roster-import-controls,
+#roster-ocr-status {
+  max-height: 140px;
+}
+
+.player-list,
+.flight-config-list,
+.roster-import-review-panel,
+.ocr-form-body {
+  max-height: 800px;
+}
+
+.score-table-wrap,
+.final-results-content,
+.final-awards-body {
+  max-height: 1600px;
+}
+
+.panel,
+.operator-link-panel,
+.roster-import-panel {
+  transition: padding 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              gap 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
 .player-panel.is-collapsed .panel-title,
 .flight-config-panel.is-collapsed .panel-title,
 .score-entry-panel.is-collapsed .panel-title,
@@ -536,7 +595,24 @@ p {
 .score-entry-panel.is-collapsed .score-table-wrap,
 .final-results-panel.is-collapsed .final-results-content,
 .final-awards-section.is-collapsed .final-awards-body {
-  display: none;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Adjust collapsed containers to prevent extra spacing */
+.operator-link-panel.is-collapsed,
+.roster-import-panel.is-collapsed {
+  padding-bottom: 0 !important;
+  row-gap: 0 !important;
+  gap: 0 !important;
 }
 
 .panel-title span {
@@ -2905,7 +2981,19 @@ p {
 }
 
 .ocr-form.is-collapsed .ocr-form-body {
-  display: none;
+  max-height: 0 !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  row-gap: 0 !important;
+  column-gap: 0 !important;
+  gap: 0 !important;
 }
 
 .ocr-form-body {
