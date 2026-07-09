@@ -610,7 +610,6 @@ p {
 /* Adjust collapsed containers to prevent extra spacing */
 .operator-link-panel.is-collapsed,
 .roster-import-panel.is-collapsed {
-  padding-bottom: 0 !important;
   row-gap: 0 !important;
   gap: 0 !important;
 }
