@@ -429,26 +429,7 @@ function applyMobileOverviewPanelState(panel, title, collapsed, label) {
   }
 
 function preserveMobileDashboardScrollAnchor(update) {
-    const topbarBottom = document.querySelector(".app-topbar")?.getBoundingClientRect().bottom || 0;
-    const anchor = [
-      document.querySelector(".flight-config-panel"),
-      document.querySelector(".player-panel"),
-      document.getElementById("final-results-panel")
-    ].find(element => element && element.getBoundingClientRect().bottom > topbarBottom + 40);
-    const anchorTop = anchor?.getBoundingClientRect().top;
     update();
-    if (!anchor || !Number.isFinite(anchorTop)) return;
-    window.requestAnimationFrame(() => {
-      const nextAnchorTop = anchor.getBoundingClientRect().top;
-      const adjustment = nextAnchorTop - anchorTop;
-      if (Math.abs(adjustment) < 1) return;
-      const root = document.documentElement;
-      const previousScrollBehavior = root.style.scrollBehavior;
-      root.style.scrollBehavior = "auto";
-      window.scrollTo(0, Math.max(0, window.scrollY + adjustment));
-      root.style.scrollBehavior = previousScrollBehavior;
-      mobileDashboardLastScrollY = window.scrollY;
-    });
   }
 
 function setMobileDashboardOverviewCollapsed(collapsed) {
@@ -1869,7 +1850,7 @@ function getStaticLiveDocument(snapshot) {
     body{margin:0;padding:24px}.shell{max-width:1180px;margin:auto}.head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:24px}
     h1{margin:0;font-size:clamp(1.7rem,5vw,3rem)}p{color:#a1a1aa}.meta{text-align:right}.division{margin:24px 0}.rows{display:grid;gap:8px}
     .row{display:grid;grid-template-columns:56px minmax(160px,1fr) 92px 92px 92px;gap:10px;align-items:center;padding:13px 16px;background:#18181b;border:1px solid #27272a;border-radius:12px}
-    .rank{font-size:1.25rem;font-weight:800;color:#3b6df6}.name{font-weight:700}.label{display:block;color:#71717a;font-size:.7rem;text-transform:uppercase}
+    .rank{font-size:1.25rem;font-weight:800;color:#10b981}.name{font-weight:700}.label{display:block;color:#71717a;font-size:.7rem;text-transform:uppercase}
     @media(max-width:680px){body{padding:14px}.head{display:block}.meta{text-align:left}.row{grid-template-columns:44px 1fr 70px}.row>div:nth-child(4),.row>div:nth-child(5){display:none}}
   </style>
 </head>
