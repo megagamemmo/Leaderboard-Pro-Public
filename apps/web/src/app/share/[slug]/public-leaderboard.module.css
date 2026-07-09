@@ -3616,7 +3616,7 @@
   box-shadow:
     0 18px 26px rgba(2, 6, 23, 0.42),
     0 0 26px rgba(250, 204, 21, 0.22),
-    0 0 0 8px rgba(52, 211, 153, 0.08);
+    0 0 0 8px rgba(59, 130, 246, 0.08);
   content: "";
   height: 30px;
   left: 50%;
@@ -3627,7 +3627,7 @@
 }
 
 .hioCup::after {
-  background: linear-gradient(180deg, #fff7cc, #facc15 52%, #047857);
+  background: linear-gradient(180deg, #fff7cc, #facc15 52%, #1d4ed8);
   border-radius: 999px;
   bottom: 29px;
   box-shadow:

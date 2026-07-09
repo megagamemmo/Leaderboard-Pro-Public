@@ -1,27 +1,35 @@
-/* Leaderboard Pro design tokens derived from TourSystem36 Pro */
+/* Leaderboard Pro design tokens — Sapphire edition */
 :root,
 :root[data-theme="dark"] {
-  --bg: #09090b;
-  --surface: #121214;
-  --surface-card: rgba(24, 24, 27, 0.55);
-  --surface-raised: rgba(39, 39, 42, 0.7);
-  --border: rgba(255,255,255,0.07);
-  --border-focus: rgba(255,255,255,0.25);
-  --text-main: #f8fafc;
+  --bg: #090d16;
+  --surface: #101622;
+  --surface-card: rgba(16, 22, 34, 0.65);
+  --surface-raised: rgba(22, 30, 48, 0.8);
+  --border: rgba(255, 255, 255, 0.05);
+  --border-focus: rgba(96, 165, 250, 0.35);
+  --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --text-subtle: #475569;
   --primary: #ffffff;
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --accent-subtle: rgba(16,185,129,0.15);
+  /* Sapphire accent - tuned to be rich, clear, and glare-free */
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-subtle: rgba(59, 130, 246, 0.08);
+  --accent-glow: rgba(59, 130, 246, 0.15);
+  /* Gradient tokens — smooth, subtle, premium and glare-free */
+  --gradient-bg: radial-gradient(ellipse at top, #111a2e 0%, #080c16 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, rgba(59, 130, 246, 0) 100%);
+  --gradient-accent: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, transparent 100%);
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #38bdf8;
-  --glass: rgba(255,255,255,0.03);
-  --glass-border: rgba(255,255,255,0.08);
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.25);
-  --shadow: 0 12px 32px rgba(0,0,0,0.4);
-  --shadow-lg: 0 24px 64px rgba(0,0,0,0.6);
+  --glass: rgba(16, 22, 34, 0.45);
+  --glass-border: rgba(59, 130, 246, 0.08);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 4px 14px rgba(37, 99, 235, 0.25);
   --radius-lg: 24px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -31,25 +39,33 @@
 :root[data-theme="light"] {
   --bg: #f8fafc;
   --surface: #ffffff;
-  --surface-card: rgba(255, 255, 255, 0.75);
-  --surface-raised: rgba(255, 255, 255, 0.95);
-  --border: rgba(0,0,0,0.06);
-  --border-focus: rgba(0,0,0,0.22);
+  --surface-card: rgba(255, 255, 255, 0.85);
+  --surface-raised: rgba(255, 255, 255, 0.98);
+  --border: rgba(15, 23, 42, 0.06);
+  --border-focus: rgba(37, 99, 235, 0.35);
   --text-main: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #475569;
   --text-subtle: #cbd5e1;
   --primary: #0f172a;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-subtle: rgba(5,150,105,0.1);
+  /* Sapphire accent - tuned to prevent light fatigue */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-subtle: rgba(37, 99, 235, 0.06);
+  --accent-glow: rgba(37, 99, 235, 0.12);
+  /* Gradient tokens — extremely clean off-white / light slate gradient */
+  --gradient-bg: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --gradient-hero: linear-gradient(180deg, rgba(37, 99, 235, 0.03) 0%, rgba(37, 99, 235, 0) 100%);
+  --gradient-accent: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
   --warning: #d97706;
   --danger: #dc2626;
   --info: #0284c7;
-  --glass: rgba(255,255,255,0.5);
-  --glass-border: rgba(0,0,0,0.04);
-  --shadow-sm: 0 4px 12px rgba(0,0,0,0.03);
-  --shadow: 0 12px 32px rgba(0,0,0,0.06);
-  --shadow-lg: 0 24px 64px rgba(0,0,0,0.09);
+  --glass: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(37, 99, 235, 0.06);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 16px 48px rgba(15, 23, 42, 0.08);
+  --shadow-accent: 0 4px 14px rgba(37, 99, 235, 0.15);
 }
 
 * {
@@ -61,13 +77,13 @@
 
 html {
   min-height: 100%;
-  background: var(--bg);
+  background: var(--gradient-bg, var(--bg));
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100svh;
-  background: var(--bg);
+  background: var(--gradient-bg, var(--bg));
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
 }

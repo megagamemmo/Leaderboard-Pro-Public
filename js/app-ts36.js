@@ -76,6 +76,151 @@ function normalizeTourSystemUser(row = {}) {
     };
   }
 
+function normalizeStartHoleMismatch(row = {}, match = null) {
+    const metadata = row.metadata || {};
+    const warning = metadata.startHoleMismatch || metadata.start_hole_mismatch || null;
+    if (!warning || typeof warning !== "object") return null;
+    const expectedStartHole = window.LB.scoring.clampInt(
+      warning.expectedStartHole || warning.expected_start_hole || warning.selectedStartHole,
+      1,
+      18,
+      0
+    );
+    const actualStartHole = window.LB.scoring.clampInt(
+      warning.actualStartHole || warning.actual_start_hole || warning.firstWrongHole,
+      1,
+      18,
+      0
+    );
+    const tourSystemUserId = window.LB.appUtils.cleanText(
+      row.toursystem_user_id || row.user_id || row.userId || metadata.toursystemUserId || match?.tourSystemUserId || ""
+    );
+    if (!expectedStartHole || !actualStartHole || !tourSystemUserId) return null;
+    const id = window.LB.appUtils.cleanText(warning.warningId || warning.warning_id)
+      || `start-hole:${tourSystemUserId}:${expectedStartHole}:${actualStartHole}`;
+    return {
+      id,
+      operatorTournamentId: window.LB.appUtils.cleanText(row.operator_tournament_id || row.operatorTournamentId || state().operator.linkedTournament?.id || ""),
+      tourSystemUserId,
+      matchId: match?.id || "",
+      linkedPlayerId: window.LB.appUtils.cleanText(match?.linkedPlayerId || row.leaderboard_player_id || metadata.leaderboardPlayerId || metadata.claimedLeaderboardPlayerId || ""),
+      displayName: match?.displayName || row.display_name || metadata.displayName || metadata.ts36DisplayName || "TS36 golfer",
+      email: match?.email || row.email || metadata.email || metadata.ts36Email || "",
+      expectedStartHole,
+      actualStartHole,
+      message: warning.message || `TS36 user chọn H${expectedStartHole} nhưng bắt đầu nhập điểm ở H${actualStartHole}.`,
+      status: "pending",
+      createdAt: warning.notifiedAt || row.submitted_at || row.submittedAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+function upsertStartHoleMismatchWarning(match, row = {}) {
+    const warning = window.LB.appTs36.normalizeStartHoleMismatch(row, match);
+    if (!warning) return false;
+    const warnings = Array.isArray(state().startHoleWarnings) ? state().startHoleWarnings : [];
+    const index = warnings.findIndex(item => item.id === warning.id);
+    if (index >= 0) {
+      const previous = warnings[index];
+      const changed = previous.matchId !== warning.matchId
+        || previous.linkedPlayerId !== warning.linkedPlayerId
+        || previous.displayName !== warning.displayName
+        || previous.expectedStartHole !== warning.expectedStartHole
+        || previous.actualStartHole !== warning.actualStartHole
+        || previous.message !== warning.message;
+      warnings[index] = {
+        ...previous,
+        ...warning,
+        status: previous.status && previous.status !== "pending" ? previous.status : "pending",
+        resolvedAt: previous.resolvedAt || "",
+        resolution: previous.resolution || null,
+        updatedAt: changed ? warning.updatedAt : previous.updatedAt
+      };
+      state().startHoleWarnings = warnings;
+      return changed;
+    }
+    state().startHoleWarnings = [warning, ...warnings].slice(0, 50);
+    state().alerts = (state().alerts || []).filter(item => item.type !== "ts36_start_hole_mismatch" || item.warningId !== warning.id);
+    state().alerts.unshift({
+      id: `start-hole-${Date.now().toString(36)}`,
+      type: "ts36_start_hole_mismatch",
+      warningId: warning.id,
+      message: `${warning.displayName}: chọn hố xuất phát H${warning.expectedStartHole} nhưng nhập điểm từ H${warning.actualStartHole}.`,
+      createdAt: new Date().toISOString()
+    });
+    return true;
+  }
+
+async function resolveStartHoleMismatchWarning(warningId, decision) {
+    const warnings = Array.isArray(state().startHoleWarnings) ? state().startHoleWarnings : [];
+    const warning = warnings.find(item => item.id === warningId);
+    const normalizedDecision = window.LB.appUtils.cleanText(decision).toLowerCase();
+    if (!warning || !["accept", "cancel"].includes(normalizedDecision)) return { ok: false, reason: "invalid_warning" };
+
+    const linked = state().operator.linkedTournament;
+    const code = state().operator.privateCode || state().tournament.operatorPrivateCode || "";
+    const resolution = {
+      id: `${warning.id}:${normalizedDecision}:${Date.now().toString(36)}`,
+      warningId: warning.id,
+      decision: normalizedDecision,
+      status: normalizedDecision === "accept" ? "start_hole_corrected" : "opponent_sync_blocked",
+      expectedStartHole: warning.expectedStartHole,
+      actualStartHole: warning.actualStartHole,
+      resolvedAt: new Date().toISOString(),
+      resolvedBy: state().tournament.operatorName || "GO"
+    };
+
+    const previousWarningState = {
+      status: warning.status,
+      resolvedAt: warning.resolvedAt,
+      resolution: warning.resolution,
+      updatedAt: warning.updatedAt
+    };
+    const rollbackWarning = () => {
+      warning.status = previousWarningState.status || "pending";
+      warning.resolvedAt = previousWarningState.resolvedAt || "";
+      warning.resolution = previousWarningState.resolution || null;
+      warning.updatedAt = previousWarningState.updatedAt || warning.updatedAt;
+      window.LB.storage.saveState();
+      window.LB.appUtils.render();
+    };
+
+    warning.status = resolution.status;
+    warning.resolvedAt = resolution.resolvedAt;
+    warning.resolution = resolution;
+    warning.updatedAt = resolution.resolvedAt;
+    window.LB.storage.saveState();
+    window.LB.appUtils.render();
+
+    const bridge = window.LB.supabaseBridge;
+    if (!linked?.id || !code || !warning.tourSystemUserId || !bridge?.resolveOperatorStartHoleMismatch) {
+      rollbackWarning();
+      return { ok: false, reason: "bridge_not_configured" };
+    }
+    const result = await bridge.resolveOperatorStartHoleMismatch(
+      linked.id,
+      code,
+      warning.tourSystemUserId,
+      resolution
+    );
+    if (!result.ok) {
+      rollbackWarning();
+      return result;
+    }
+    state().alerts.unshift({
+      id: `start-hole-resolved-${Date.now().toString(36)}`,
+      type: "ts36_start_hole_resolved",
+      warningId: warning.id,
+      message: normalizedDecision === "accept"
+        ? `${warning.displayName}: đã gửi xác nhận đổi TS36 sang hố xuất phát H${warning.actualStartHole}.`
+        : `${warning.displayName}: đã hủy sync đối thủ, BTC dùng bảng điểm cứng để xác nhận.`,
+      createdAt: new Date().toISOString()
+    });
+    window.LB.storage.saveState();
+    window.LB.appUtils.render();
+    return result;
+  }
+
 function upsertTourSystemMatch(row = {}) {
     const candidate = window.LB.appTs36.normalizeTourSystemUser(row);
     const suggested = window.LB.appPlayer.findSuggestedPlayer(candidate);
@@ -473,8 +618,10 @@ async function importTourSystemScores(options = {}) {
     const authoritativeScoresByMatch = new Map();
     const touchedPlayerIds = new Set();
     let changed = 0;
+    let warningChanged = 0;
     rows.forEach(row => {
       const match = window.LB.appTs36.upsertTourSystemMatch(row);
+      if (window.LB.appTs36.upsertStartHoleMismatchWarning(match, row)) warningChanged += 1;
       const isDeletedScore = window.LB.appTs36.isDeletedTourSystemScore(row);
       const pendingChanged = isDeletedScore
         ? window.LB.appTs36.removePendingTourSystemScore(match, row)
@@ -536,8 +683,8 @@ async function importTourSystemScores(options = {}) {
         createdAt: new Date().toISOString()
       });
     }
-    return changed;
+    return changed + warningChanged;
   }
 
-  return { isLinkedToTourSystem, markTourSystemMatchMissingSystem36, getPlayerLinkedTourSystemUserId, isPlayerLinkedToDifferentTs36, isTourSystemMatchConfirmed, normalizeTourSystemUser, upsertTourSystemMatch, isDeletedTourSystemScore, removePendingTourSystemScore, clearTourSystemScoresForMatch, pruneStaleTourSystemScores, linkTourSystemMatch, autoLinkTourSystemMatch, maybeAutoLinkTourSystemMatch, clearTourSystemPlayerLink, resetLocalTourSystemMatchSuggestions, syncResetTourSystemMatchesToBridge, syncAcceptedTourSystemMatchToBridge, resetTourSystemMatchReview, refreshTourSystemScores, importTourSystemParticipants, importTourSystemScores };
+  return { isLinkedToTourSystem, markTourSystemMatchMissingSystem36, getPlayerLinkedTourSystemUserId, isPlayerLinkedToDifferentTs36, isTourSystemMatchConfirmed, normalizeTourSystemUser, normalizeStartHoleMismatch, upsertStartHoleMismatchWarning, resolveStartHoleMismatchWarning, upsertTourSystemMatch, isDeletedTourSystemScore, removePendingTourSystemScore, clearTourSystemScoresForMatch, pruneStaleTourSystemScores, linkTourSystemMatch, autoLinkTourSystemMatch, maybeAutoLinkTourSystemMatch, clearTourSystemPlayerLink, resetLocalTourSystemMatchSuggestions, syncResetTourSystemMatchesToBridge, syncAcceptedTourSystemMatchToBridge, resetTourSystemMatchReview, refreshTourSystemScores, importTourSystemParticipants, importTourSystemScores };
 })();

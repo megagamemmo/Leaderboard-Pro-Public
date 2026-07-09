@@ -109,8 +109,8 @@
       .lb-cloud-auth-card label{display:grid;gap:7px;color:#d4d4d8}.lb-cloud-auth-card input{min-height:46px;padding:0 13px;border:1px solid #3f3f46;border-radius:10px;background:#09090b;color:#fff;font:inherit}
       .lb-cloud-password-field{display:grid;grid-template-columns:1fr 46px;align-items:stretch}.lb-cloud-password-field input{border-radius:10px 0 0 10px}
       .lb-cloud-password-toggle{min-height:46px!important;border:1px solid #3f3f46!important;border-left:0!important;border-radius:0 10px 10px 0!important;background:#27272a!important;color:#f4f4f5!important;font-size:1rem!important;font-weight:700!important}
-      .lb-cloud-auth-card button{min-height:46px;border:0;border-radius:10px;background:#10b981;color:#052e23;font-weight:800;cursor:pointer}
-      .lb-cloud-auth-error{min-height:22px;color:#fca5a5}.lb-cloud-runtime-bar{position:sticky;top:0;z-index:9999;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 16px;background:#052e23;color:#d1fae5;font-size:.82rem}
+      .lb-cloud-auth-card button{min-height:46px;border:0;border-radius:10px;background:#3b82f6;color:#0f172a;font-weight:800;cursor:pointer}
+      .lb-cloud-auth-error{min-height:22px;color:#fca5a5}.lb-cloud-runtime-bar{position:sticky;top:0;z-index:9999;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 16px;background:#0f172a;color:#d1fae5;font-size:.82rem}
       .lb-cloud-runtime-bar button{border:1px solid rgba(255,255,255,.28);border-radius:8px;padding:6px 10px;background:transparent;color:inherit}
       body.runtime-read-only main,body.runtime-read-only .app-topbar{filter:saturate(.65);opacity:.78}
       body.runtime-read-only main input,body.runtime-read-only main select,body.runtime-read-only main textarea,body.runtime-read-only main button{pointer-events:none}

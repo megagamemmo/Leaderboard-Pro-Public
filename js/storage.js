@@ -126,6 +126,7 @@
         imports: Array.isArray(parsed.imports) ? parsed.imports : [],
         identity: { ...window.LB.state.identity, ...(parsed.identity || {}) },
         ts36Matches: Array.isArray(parsed.ts36Matches) ? parsed.ts36Matches : [],
+        startHoleWarnings: Array.isArray(parsed.startHoleWarnings) ? parsed.startHoleWarnings : [],
         matchReview: { ...window.LB.state.matchReview, ...(parsed.matchReview || {}) },
         alerts: Array.isArray(parsed.alerts) ? parsed.alerts : [],
         operator: {
@@ -212,6 +213,7 @@
     };
     base.imports = [];
     base.ts36Matches = [];
+    base.startHoleWarnings = [];
     base.matchReview = {
       selectedTs36Id: "",
       selectedPlayerId: ""

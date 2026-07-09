@@ -468,9 +468,9 @@
         window.LB.pendingPasteScores = scoreString.split(/[\s,]+/).map(s => String(s).trim().toLowerCase());
         target.textContent = "Đã Copy!";
         target.classList.add("success", "is-ok");
-        target.style.backgroundColor = "var(--emerald)";
+        target.style.backgroundColor = "var(--accent)";
         target.style.color = "white";
-        target.style.borderColor = "var(--emerald)";
+        target.style.borderColor = "var(--accent)";
         setTimeout(() => {
           target.textContent = originalText;
           target.classList.remove("success", "is-ok");
@@ -725,6 +725,13 @@
       state().matchReview.selectedPlayerId = target.dataset.playerId || "";
       window.LB.storage.saveState();
       renderTs36MatchReview();
+    }
+    if (action === "resolve-start-hole-mismatch") {
+      const resultPromise = window.LB.appTs36.resolveStartHoleMismatchWarning(target.dataset.warningId || "", target.dataset.decision || "");
+      resultPromise.then(result => {
+        if (!result.ok) alert(`Chưa gửi được xác nhận sang TS36: ${result.reason || result.error || "bridge_failed"}`);
+      });
+      return;
     }
     if (action === "accept-suggested-match") {
       const match = (state().ts36Matches || []).find(item => item.id === target.dataset.matchId);
@@ -1859,6 +1866,9 @@
     const visibleMatches = matches.filter(match => window.LB.appUtils.tourSystemMatchMatchesSearch(match, ts36MatchSearchQuery));
     const pendingReviewCount = matches.filter(match => !window.LB.appTs36.isTourSystemMatchConfirmed(match)).length;
     const visiblePendingReviewCount = visibleMatches.filter(match => !window.LB.appTs36.isTourSystemMatchConfirmed(match)).length;
+    const pendingStartHoleWarnings = (state().startHoleWarnings || [])
+      .filter(warning => warning.status === "pending")
+      .slice(0, 6);
     const playerRows = state().players
       .filter(player => window.LB.appUtils.playerMatchesSearch(player, rosterMatchSearchQuery))
       .map(player => ({
@@ -1879,6 +1889,22 @@
       });
 
     root.innerHTML = `
+      ${pendingStartHoleWarnings.length ? `
+        <div class="start-hole-warning-panel">
+          ${pendingStartHoleWarnings.map(warning => `
+            <article class="start-hole-warning-card">
+              <div>
+                <strong>${window.LB.appUtils.escapeHtml(warning.displayName || "TS36 golfer")}</strong>
+                <span>Đã chọn H${window.LB.appUtils.escapeHtml(warning.expectedStartHole)} nhưng bắt đầu nhập điểm ở H${window.LB.appUtils.escapeHtml(warning.actualStartHole)}.</span>
+              </div>
+              <div class="start-hole-warning-actions">
+                <button type="button" class="secondary-button" data-action="resolve-start-hole-mismatch" data-warning-id="${window.LB.appUtils.escapeHtml(warning.id)}" data-decision="accept">Đổi TS36 sang H${window.LB.appUtils.escapeHtml(warning.actualStartHole)}</button>
+                <button type="button" class="secondary-button is-danger" data-action="resolve-start-hole-mismatch" data-warning-id="${window.LB.appUtils.escapeHtml(warning.id)}" data-decision="cancel">Hủy, dùng bảng cứng</button>
+              </div>
+            </article>
+          `).join("")}
+        </div>
+      ` : ""}
       <div class="match-board">
         <section class="match-column">
           <div class="match-column-head">

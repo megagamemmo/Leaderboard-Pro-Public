@@ -1869,7 +1869,7 @@ function getStaticLiveDocument(snapshot) {
     body{margin:0;padding:24px}.shell{max-width:1180px;margin:auto}.head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin-bottom:24px}
     h1{margin:0;font-size:clamp(1.7rem,5vw,3rem)}p{color:#a1a1aa}.meta{text-align:right}.division{margin:24px 0}.rows{display:grid;gap:8px}
     .row{display:grid;grid-template-columns:56px minmax(160px,1fr) 92px 92px 92px;gap:10px;align-items:center;padding:13px 16px;background:#18181b;border:1px solid #27272a;border-radius:12px}
-    .rank{font-size:1.25rem;font-weight:800;color:#10b981}.name{font-weight:700}.label{display:block;color:#71717a;font-size:.7rem;text-transform:uppercase}
+    .rank{font-size:1.25rem;font-weight:800;color:#3b82f6}.name{font-weight:700}.label{display:block;color:#71717a;font-size:.7rem;text-transform:uppercase}
     @media(max-width:680px){body{padding:14px}.head{display:block}.meta{text-align:left}.row{grid-template-columns:44px 1fr 70px}.row>div:nth-child(4),.row>div:nth-child(5){display:none}}
   </style>
 </head>

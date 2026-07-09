@@ -148,6 +148,7 @@
       },
       imports: [],
       ts36Matches: [],
+      startHoleWarnings: [],
       matchReview: {
         selectedTs36Id: "",
         selectedPlayerId: ""

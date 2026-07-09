@@ -554,6 +554,23 @@
     }).catch(err => ({ ok: false, reason: err.message }));
   }
 
+  async function resolveOperatorStartHoleMismatch(operatorTournamentId, privateCode, tourSystemUserId, resolution) {
+    if (simulatorWriteBlocked()) return localOnlyResult();
+    const payload = {
+      operatorTournamentId,
+      privateCode,
+      tourSystemUserId,
+      decision: resolution?.decision || "",
+      actualStartHole: resolution?.actualStartHole || "",
+      expectedStartHole: resolution?.expectedStartHole || "",
+      resolution: resolution || {}
+    };
+    return callLeaderboardBridgeOrFallback("resolveOperatorStartHoleMismatch", payload, async () => ({
+      ok: false,
+      reason: "leaderboard_bridge_required"
+    })).catch(err => ({ ok: false, reason: err.message }));
+  }
+
   async function requestLeaderboardSyncUnlock(tournamentId, sourceOcrUnlocked) {
     if (simulatorWriteBlocked()) return { ok: false, blocked: true, error: "simulator_local_only" };
     const supabaseClient = getClient();
@@ -593,6 +610,7 @@
     loadOperatorTournamentParticipants,
     resetOperatorTournamentSuggestedMatches,
     acceptOperatorTournamentSuggestedMatch,
+    resolveOperatorStartHoleMismatch,
     requestLeaderboardSyncUnlock
   };
 })();
