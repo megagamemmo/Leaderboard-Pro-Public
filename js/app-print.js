@@ -231,7 +231,7 @@ function buildPlayerRosterPrintDocument(layoutInput = "landscape") {
             }
 
             .eyebrow {
-              color: #4f46e5;
+              color: #1d4ed8;
               font-size: ${printLayout.eyebrowFontSize};
               font-weight: 900;
               letter-spacing: 0;
@@ -316,14 +316,14 @@ function buildPlayerRosterPrintDocument(layoutInput = "landscape") {
 
             .group-row td {
               background: #dcfce7;
-              border-color: #c7d2fe;
+              border-color: #93c5fd;
               color: #064e3b;
               font-weight: 900;
               padding: ${printLayout.groupPadding};
             }
 
             .group-row span {
-              color: #4f46e5;
+              color: #1d4ed8;
               float: right;
               font-weight: 800;
             }

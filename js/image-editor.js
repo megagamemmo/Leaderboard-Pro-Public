@@ -376,7 +376,7 @@
         ctx.rect(cb.x, cb.y, cb.width, cb.height);
         ctx.fill("evenodd");
         
-        ctx.fillStyle = '#6366f1'; // warm-indigo-500
+        ctx.fillStyle = '#3b6df6'; // warm-blue-500
         const handleSize = 16 / this.state.zoom;
         const drawHandle = (x, y) => {
            ctx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
@@ -386,7 +386,7 @@
         drawHandle(cb.x, cb.y + cb.height);
         drawHandle(cb.x + cb.width, cb.y + cb.height);
         
-        ctx.strokeStyle = '#6366f1';
+        ctx.strokeStyle = '#3b6df6';
         ctx.lineWidth = 2 / this.state.zoom;
         ctx.strokeRect(cb.x, cb.y, cb.width, cb.height);
         

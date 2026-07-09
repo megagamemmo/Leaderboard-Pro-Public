@@ -2575,7 +2575,7 @@
   --best-gross-shift-settle: -92%;
   background:
     radial-gradient(circle at 78% 18%, rgba(250, 204, 21, 0.34), transparent 25%),
-    radial-gradient(circle at 10% 88%, rgba(99, 102, 241, 0.12), transparent 30%),
+    radial-gradient(circle at 10% 88%, rgba(59, 109, 246, 0.12), transparent 30%),
     linear-gradient(135deg, color-mix(in srgb, var(--panel) 72%, #0c0e17), color-mix(in srgb, var(--panel-strong) 82%, #2f2108));
   border: 1px solid rgba(250, 204, 21, 0.36);
   border-radius: 22px;
@@ -2717,7 +2717,7 @@
   align-self: stretch;
   backdrop-filter: blur(18px) saturate(1.16);
   background:
-    linear-gradient(135deg, rgba(250, 204, 21, 0.16), rgba(99, 102, 241, 0.05)),
+    linear-gradient(135deg, rgba(250, 204, 21, 0.16), rgba(59, 109, 246, 0.05)),
     rgba(15, 23, 42, 0.34);
   border: 1px solid rgba(250, 204, 21, 0.34);
   border-radius: 18px;
@@ -4502,10 +4502,10 @@
 .technicalAwards,
 .specialAwards {
   background:
-    radial-gradient(circle at 10% 0%, rgba(99, 102, 241, 0.05), transparent 34%),
+    radial-gradient(circle at 10% 0%, rgba(59, 109, 246, 0.05), transparent 34%),
     radial-gradient(circle at 92% 100%, rgba(250, 204, 21, 0.05), transparent 30%),
     linear-gradient(145deg, color-mix(in srgb, var(--panel) 97%, #0c0e17), color-mix(in srgb, var(--panel-strong) 94%, #101827));
-  border: 1px solid color-mix(in srgb, var(--line) 88%, #818cf8);
+  border: 1px solid color-mix(in srgb, var(--line) 88%, #5d87f8);
   border-radius: 18px;
   box-shadow:
     0 10px 26px rgba(2, 6, 23, 0.12),
