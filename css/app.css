@@ -5617,6 +5617,12 @@ p {
   z-index: 1;
 }
 
+.final-awards-body {
+  display: grid;
+  gap: 20px;
+  margin-top: 16px;
+}
+
 .final-control-grid {
   display: grid;
   gap: 12px;
