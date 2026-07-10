@@ -5,24 +5,24 @@ import { NextResponse } from "next/server";
 const legacyRoot = path.join(/* turbopackIgnore: true */ process.cwd(), "..", "..");
 
 const rootFileTargets = {
-  "env-config.js": path.join(legacyRoot, "env-config.js"),
-  "favicon.ico": path.join(legacyRoot, "favicon.ico"),
-  "index.html": path.join(legacyRoot, "index.html"),
-  "manifest.webmanifest": path.join(legacyRoot, "manifest.webmanifest"),
-  "runtime-env.js": path.join(legacyRoot, "runtime-env.js"),
-  "share.html": path.join(legacyRoot, "share.html"),
+  "env-config.js": path.join(/* turbopackIgnore: true */ legacyRoot, "env-config.js"),
+  "favicon.ico": path.join(/* turbopackIgnore: true */ legacyRoot, "favicon.ico"),
+  "index.html": path.join(/* turbopackIgnore: true */ legacyRoot, "index.html"),
+  "manifest.webmanifest": path.join(/* turbopackIgnore: true */ legacyRoot, "manifest.webmanifest"),
+  "runtime-env.js": path.join(/* turbopackIgnore: true */ legacyRoot, "runtime-env.js"),
+  "share.html": path.join(/* turbopackIgnore: true */ legacyRoot, "share.html"),
 } as const;
 
 const directoryRoots = {
-  assets: path.join(legacyRoot, "assets"),
-  css: path.join(legacyRoot, "css"),
-  fonts: path.join(legacyRoot, "fonts"),
-  icons: path.join(legacyRoot, "icons"),
-  images: path.join(legacyRoot, "images"),
-  img: path.join(legacyRoot, "img"),
-  js: path.join(legacyRoot, "js"),
-  media: path.join(legacyRoot, "media"),
-  "offline-data": path.join(legacyRoot, "offline-data"),
+  assets: path.join(/* turbopackIgnore: true */ legacyRoot, "assets"),
+  css: path.join(/* turbopackIgnore: true */ legacyRoot, "css"),
+  fonts: path.join(/* turbopackIgnore: true */ legacyRoot, "fonts"),
+  icons: path.join(/* turbopackIgnore: true */ legacyRoot, "icons"),
+  images: path.join(/* turbopackIgnore: true */ legacyRoot, "images"),
+  img: path.join(/* turbopackIgnore: true */ legacyRoot, "img"),
+  js: path.join(/* turbopackIgnore: true */ legacyRoot, "js"),
+  media: path.join(/* turbopackIgnore: true */ legacyRoot, "media"),
+  "offline-data": path.join(/* turbopackIgnore: true */ legacyRoot, "offline-data"),
 } as const;
 
 const allowedExtensions = new Set([
@@ -234,7 +234,7 @@ function resolveLegacyPath(parts: string[]) {
   } else {
     if (!allowedRootDirectories.has(firstPart)) return null;
     base = directoryRoots[firstPart as keyof typeof directoryRoots];
-    target = path.join(base, ...cleanParts.slice(1));
+    target = path.join(/* turbopackIgnore: true */ base, ...cleanParts.slice(1));
   }
 
   const relative = path.relative(base, target);
