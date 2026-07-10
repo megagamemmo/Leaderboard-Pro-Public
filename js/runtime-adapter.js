@@ -24,6 +24,7 @@
   const INSTANCE_ID_KEY = "lbpro_cloud_instance_id";
   const AUTH_DOMAIN = String(window.ENV?.LB_CLOUD_AUTH_DOMAIN || "operator.system36.app");
   const clientKind = String(window.ENV?.LB_RUNTIME_CLIENT || "web");
+  const isAuthParent = new URLSearchParams(window.location.search).get("auth") === "parent";
   const instanceId = localStorage.getItem(INSTANCE_ID_KEY) || (
     window.crypto?.randomUUID?.() || `lb-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
   );
@@ -180,6 +181,15 @@
     if (message) setRuntimeBar(message, readOnly ? "warning" : "ok");
   }
 
+  function handleAuthRequired(message = "") {
+    clearCachedWorkspace();
+    if (isAuthParent) {
+      window.parent.postMessage({ type: "lb-cloud-auth-required", message }, "*");
+    } else {
+      createAuthOverlay();
+    }
+  }
+
   function createAuthOverlay() {
     let overlay = document.getElementById("lb-cloud-auth-overlay");
     if (overlay) return overlay;
@@ -330,6 +340,9 @@
       window.LB.app.finishLinkedTournamentEntry();
       lastSavedSignature = getWorkspaceSignature(buildWorkspacePayload());
       runtimeReady = true;
+      if (isAuthParent) {
+        window.parent.postMessage({ type: "lb-cloud-runtime-ready" }, "*");
+      }
     } finally {
       hydrating = false;
     }
@@ -485,21 +498,18 @@
   async function autoResume() {
     const client = getClient();
     if (!client) {
-      clearCachedWorkspace();
-      createAuthOverlay();
+      handleAuthRequired();
       return;
     }
     const { data } = await client.auth.getSession();
     if (!data.session || !privateCode) {
-      clearCachedWorkspace();
-      createAuthOverlay();
+      handleAuthRequired();
       return;
     }
     try {
       await bootstrapWorkspace(privateCode);
     } catch {
-      clearCachedWorkspace();
-      createAuthOverlay();
+      handleAuthRequired();
     }
   }
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
-import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const workspaceRoot = path.resolve(process.cwd(), "../..");
+const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 const privateLanDevOrigins = [
   "10.*.*.*",
@@ -35,6 +35,14 @@ const allowedDevOrigins = Array.from(new Set([
 
 const nextConfig: NextConfig = {
   allowedDevOrigins,
+  outputFileTracingExcludes: {
+    "/api/simulator2": [
+      ".local/**/*",
+      "tools/**/*",
+      "apps/web/next.config.ts",
+      "next.config.ts",
+    ],
+  },
   outputFileTracingRoot: workspaceRoot,
   reactStrictMode: true,
 };

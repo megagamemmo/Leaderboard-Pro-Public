@@ -1,6 +1,9 @@
 import { networkInterfaces } from "node:os";
 import { NextResponse } from "next/server";
-import { writeLocalPublicSnapshot } from "@/lib/local-public-snapshots";
+import {
+  isLocalSnapshotRuntimeEnabled,
+  writeLocalPublicSnapshot,
+} from "@/lib/local-public-snapshots";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -709,6 +712,12 @@ async function fetchBinary(url: string) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  if (!isLocalSnapshotRuntimeEnabled()) {
+    return NextResponse.json(
+      { ok: false, error: "local_live_export_runtime_disabled" },
+      { status: 404, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const { slug } = await context.params;
   const clean = cleanSlug(slug);
   if (!clean) {

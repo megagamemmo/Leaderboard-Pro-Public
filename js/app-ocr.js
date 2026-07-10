@@ -253,8 +253,24 @@ function renderOcrReview(rows = [], task = "scorecards") {
     }
   }
 
+function getLocalOcrEndpoint() {
+    const configured = String(window.ENV?.LOCAL_OCR_ENDPOINT || "").trim();
+    if (configured) return configured;
+    const hostname = String(window.location?.hostname || "").toLowerCase();
+    const privateIpv4 = /^10\./.test(hostname)
+      || /^192\.168\./.test(hostname)
+      || (() => {
+        const match = hostname.match(/^172\.(\d+)\./);
+        return !!match && Number(match[1]) >= 16 && Number(match[1]) <= 31;
+      })();
+    const localRuntime = window.location?.protocol === "http:"
+      && (["localhost", "127.0.0.1", "[::1]", "::1"].includes(hostname) || privateIpv4);
+    return localRuntime ? "http://localhost:8866/ocr" : "";
+  }
+
 function getOcrConfigUrl() {
-    const endpoint = window.ENV?.LOCAL_OCR_ENDPOINT || "http://localhost:8866/ocr";
+    const endpoint = getLocalOcrEndpoint();
+    if (!endpoint) return "";
     try {
       const url = new URL(endpoint, window.location.href);
       const path = url.pathname.replace(/\/ocr\/?$/i, "");
@@ -263,9 +279,9 @@ function getOcrConfigUrl() {
       url.hash = "";
       return url.toString();
     } catch (err) {
-      return "http://localhost:8866/config";
+      return "";
     }
   }
 
-  return { promptOcrIdentityMatch, runRosterImportOcr, buildOcrContext, detectOcrTask, syncOcrTaskUi, renderOcrReview, getOcrConfigUrl };
+  return { promptOcrIdentityMatch, runRosterImportOcr, buildOcrContext, detectOcrTask, syncOcrTaskUi, renderOcrReview, getLocalOcrEndpoint, getOcrConfigUrl };
 })();

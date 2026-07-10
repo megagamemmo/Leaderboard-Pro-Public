@@ -1195,6 +1195,8 @@ function normalizeOperatorTournament(row = {}) {
         row.metadata?.managementMode ||
         "fixed"
       ).toLowerCase() === "flexible" ? "flexible" : "fixed",
+      packageType: String(row.package_type || row.packageType || "fixed").trim().toLowerCase(),
+      syncPolicy: String(row.sync_policy || row.syncPolicy || "per_user_credit").trim().toLowerCase(),
       operatorUsername: row.operator_username || row.operatorUsername || "",
       participantCount: row.participant_count || row.participantCount || 0,
       startsAt: row.starts_at || row.startsAt || "",
@@ -1208,6 +1210,8 @@ function getOperatorTournamentListSignature() {
       item.id,
       item.leaderboardTournamentId,
       item.shareSlug,
+      item.packageType,
+      item.syncPolicy,
       item.participantCount,
       item.updatedAt || "",
       item.flightConfig || null
@@ -2085,7 +2089,7 @@ function normalizeGeminiSettingsModel(value) {
   }
 
 function renderServiceSettings(data = {}) {
-    window.LB.appUtils.setValue("settings-local-ocr-endpoint", window.ENV?.LOCAL_OCR_ENDPOINT || "http://localhost:8866/ocr");
+    window.LB.appUtils.setValue("settings-local-ocr-endpoint", window.LB.appOcr.getLocalOcrEndpoint());
     window.LB.appUtils.setValue("settings-gemini-model", normalizeGeminiSettingsModel(data.gemini_model));
     window.LB.appUtils.setValue("settings-paddle-device", data.paddle_device || "auto");
     window.LB.appUtils.setValue("settings-paddle-cpu-threads", data.paddle_cpu_threads || "");
@@ -2121,9 +2125,17 @@ function renderServiceSettings(data = {}) {
   }
 
 async function loadServiceSettings(notify = false) {
-    window.LB.appUtils.setValue("settings-local-ocr-endpoint", window.ENV?.LOCAL_OCR_ENDPOINT || "http://localhost:8866/ocr");
+    const configUrl = window.LB.appOcr.getOcrConfigUrl();
+    window.LB.appUtils.setValue("settings-local-ocr-endpoint", window.LB.appOcr.getLocalOcrEndpoint());
+    if (!configUrl) {
+      const message = "OCR local chưa được cấu hình cho runtime này.";
+      window.LB.appUtils.setText("settings-service-state", "Chưa cấu hình");
+      window.LB.appUtils.setSettingsStatus(message, "");
+      if (notify) alert(message);
+      return;
+    }
     try {
-      const response = await fetch(window.LB.appOcr.getOcrConfigUrl());
+      const response = await fetch(configUrl);
       if (!response.ok) throw new Error(`OCR config endpoint lỗi ${response.status}`);
       const data = await response.json();
       window.LB.appUtils.renderServiceSettings(data);
@@ -2146,9 +2158,11 @@ async function saveServiceSettings() {
     if (key.trim()) {
       localStorage.setItem("lb_gemini_api_key", key.trim());
     }
+    const configUrl = window.LB.appOcr.getOcrConfigUrl();
     
     try {
-      const response = await fetch(window.LB.appOcr.getOcrConfigUrl(), {
+      if (!configUrl) throw new Error("OCR local chưa được cấu hình cho runtime này.");
+      const response = await fetch(configUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2180,9 +2194,11 @@ async function saveServiceSettings() {
 async function clearServiceApiKey() {
     if (!confirm("Xóa Google API Key khỏi file cấu hình local?")) return;
     localStorage.removeItem("lb_gemini_api_key");
+    const configUrl = window.LB.appOcr.getOcrConfigUrl();
     try {
+      if (!configUrl) throw new Error("OCR local chưa được cấu hình cho runtime này.");
       const model = normalizeGeminiSettingsModel(document.getElementById("settings-gemini-model")?.value);
-      const response = await fetch(window.LB.appOcr.getOcrConfigUrl(), {
+      const response = await fetch(configUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clear_gemini_api_key: true, gemini_model: model })

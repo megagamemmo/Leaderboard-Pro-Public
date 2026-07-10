@@ -43,15 +43,30 @@
     return /^(1|true|yes)$/i.test(String(env.OPERATOR_BRIDGE_DIRECT_SUPABASE_FALLBACK || ""));
   }
 
+  async function getLeaderboardBridgeAccessToken() {
+    const supabaseClient = getClient();
+    if (!supabaseClient?.auth) return "";
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+      return String(data?.session?.access_token || "").trim();
+    } catch (err) {
+      console.warn("[TS36 Bridge] failed to read auth session:", err);
+      return "";
+    }
+  }
+
   async function callLeaderboardBridge(action, payload = {}) {
     const endpoint = getLeaderboardBridgeEndpoint();
     if (!endpoint || !window.fetch) return null;
+    const accessToken = await getLeaderboardBridgeAccessToken();
 
     const response = await window.fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json"
+        Accept: "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
       },
       cache: "no-store",
       body: JSON.stringify({ action, payload })

@@ -1156,6 +1156,23 @@ function getLanSnapshotUrl(slug: string) {
   const configured = (window as typeof window & {
     ENV?: { LOCAL_SNAPSHOT_SERVER_URL?: string };
   }).ENV?.LOCAL_SNAPSHOT_SERVER_URL?.trim().replace(/\/+$/, "");
+  const hostname = window.location.hostname.toLowerCase();
+  const privateIpv4 = /^10\./.test(hostname)
+    || /^192\.168\./.test(hostname)
+    || (() => {
+      const match = hostname.match(/^172\.(\d+)\./);
+      return !!match && Number(match[1]) >= 16 && Number(match[1]) <= 31;
+    })();
+  const localRuntime = window.location.protocol === "http:"
+    && window.location.port === "4222"
+    && (
+      hostname === "localhost"
+      || hostname === "127.0.0.1"
+      || hostname === "[::1]"
+      || hostname === "::1"
+      || privateIpv4
+    );
+  if (!configured && !localRuntime) return "";
   const baseUrl = configured || `${window.location.protocol}//${window.location.hostname}:4333`;
   return `${baseUrl}/snapshots/${encodeURIComponent(cleanSlug)}`;
 }
