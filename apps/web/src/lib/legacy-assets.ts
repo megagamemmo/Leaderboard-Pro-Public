@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
-const legacyRoot = path.join(/*turbopackIgnore: true*/ process.cwd(), "..", "..");
+const legacyRoot = path.join(/* turbopackIgnore: true */ process.cwd(), "..", "..");
 
 const rootFileTargets = {
   "env-config.js": path.join(legacyRoot, "env-config.js"),
@@ -256,7 +256,7 @@ export async function serveLegacyAsset(parts: string[]) {
   }
 
   try {
-    const file = await readFile(resolved.target);
+    const file = await readFile(/* turbopackIgnore: true */ resolved.target);
     return new NextResponse(file, {
       headers: {
         "Cache-Control": "no-store, max-age=0",
