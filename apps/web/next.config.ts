@@ -33,15 +33,36 @@ const allowedDevOrigins = Array.from(new Set([
   ...configuredAllowedDevOrigins,
 ]));
 
+const legacyAssetTracePatterns = [
+  "../../env-config.js",
+  "../../favicon.ico",
+  "../../index.html",
+  "../../manifest.webmanifest",
+  "../../runtime-env.js",
+  "../../share.html",
+  "../../assets/**/*",
+  "../../css/**/*",
+  "../../fonts/**/*",
+  "../../icons/**/*",
+  "../../images/**/*",
+  "../../img/**/*",
+  "../../js/**/*",
+  "../../media/**/*",
+  "../../offline-data/**/*",
+];
+
 const nextConfig: NextConfig = {
   allowedDevOrigins,
   outputFileTracingExcludes: {
     "/api/simulator2": [
-      ".local/**/*",
-      "tools/**/*",
-      "apps/web/next.config.ts",
+      "../../.local/**/*",
+      "../../tools/**/*",
       "next.config.ts",
     ],
+  },
+  outputFileTracingIncludes: {
+    "/": legacyAssetTracePatterns,
+    "/\\[\\.\\.\\.path\\]": legacyAssetTracePatterns,
   },
   outputFileTracingRoot: workspaceRoot,
   reactStrictMode: true,
