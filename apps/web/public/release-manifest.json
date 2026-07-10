@@ -1,7 +1,7 @@
 {
-  "releaseId": "lb-20260711005151-c1010181620a-997804ce",
-  "sourceCommit": "c1010181620a4c4b4737bc46d589590ce5cf82b6",
+  "generatedAt": "2026-07-10T17:56:13.1754359Z",
   "source": "Leaderboard Pro",
-  "generatedAt": "2026-07-10T17:51:52.4854037Z",
-  "sourceDirty": true
+  "releaseId": "lb-20260711005611-c1010181620a-525092d0",
+  "sourceDirty": true,
+  "sourceCommit": "c1010181620a4c4b4737bc46d589590ce5cf82b6"
 }
